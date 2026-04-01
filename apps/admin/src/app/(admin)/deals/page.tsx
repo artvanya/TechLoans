@@ -7,15 +7,16 @@ export const dynamic = 'force-dynamic'
 
 interface SearchParams { status?: string; type?: string; region?: string; search?: string }
 
-export default async function AdminDealsPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function AdminDealsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams
   const where: any = {
-    ...(searchParams.status ? { status: searchParams.status } : {}),
-    ...(searchParams.type ? { type: searchParams.type } : {}),
-    ...(searchParams.region ? { propertyRegion: searchParams.region } : {}),
-    ...(searchParams.search ? { OR: [
-      { name: { contains: searchParams.search, mode: 'insensitive' } },
-      { internalId: { contains: searchParams.search, mode: 'insensitive' } },
-      { propertyCity: { contains: searchParams.search, mode: 'insensitive' } },
+    ...(params.status ? { status: params.status } : {}),
+    ...(params.type ? { type: params.type } : {}),
+    ...(params.region ? { propertyRegion: params.region } : {}),
+    ...(params.search ? { OR: [
+      { name: { contains: params.search, mode: 'insensitive' } },
+      { internalId: { contains: params.search, mode: 'insensitive' } },
+      { propertyCity: { contains: params.search, mode: 'insensitive' } },
     ]} : {}),
   }
 
@@ -43,7 +44,7 @@ export default async function AdminDealsPage({ searchParams }: { searchParams: S
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
         {[null, 'DRAFT', 'UNDER_REVIEW', 'APPROVED', 'LIVE', 'ACTIVE', 'FUNDED', 'REPAID', 'REJECTED'].map((s) => {
           const count = s ? (statusCount[s] ?? 0) : deals.length
-          const active = (searchParams.status ?? null) === s
+          const active = (params.status ?? null) === s
           return (
             <a key={s ?? 'all'} href={s ? `?status=${s}` : '/deals'}
               style={{ padding: '5px 12px', borderRadius: '20px', fontSize: '11.5px', fontWeight: 500, border: `1px solid ${active ? '#C4A355' : 'rgba(255,255,255,0.07)'}`, color: active ? '#C4A355' : '#7C7A74', background: active ? 'rgba(196,163,85,0.06)' : 'transparent', textDecoration: 'none', transition: 'all 0.15s' }}>
@@ -101,7 +102,7 @@ export default async function AdminDealsPage({ searchParams }: { searchParams: S
                       </span>
                     </td>
                     <td style={{ padding: '12px 14px', fontSize: '10.5px', color: '#7C7A74', fontFamily: "'DM Mono', monospace" }}>{formatDate(deal.updatedAt.toISOString(), 'short')}</td>
-                    <td style={{ padding: '12px 14px' }} onClick={(e) => e.stopPropagation()}>
+                    <td style={{ padding: '12px 14px' }}>
                       <div style={{ display: 'flex', gap: '5px' }}>
                         <Link href={`/deals/${deal.id}`} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', color: '#E8E6DF', textDecoration: 'none' }}>Edit</Link>
                         {deal.status === 'APPROVED' && (

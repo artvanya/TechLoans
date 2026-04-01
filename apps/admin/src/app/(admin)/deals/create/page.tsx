@@ -4,26 +4,21 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6
-
 const STEPS = ['Basics', 'Property', 'Financials', 'Risk', 'Documents', 'Publish']
 
 interface FormData {
-  // Step 1
   name: string; type: string; borrowerType: string; borrowerPurpose: string
   summary: string; internalNotes: string; borrowerLegalName: string
   borrowerContact: string; creditBackground: string; underwriterNotes: string
-  // Step 2
   propertyType: string; propertyRegion: string; occupancyStatus: string
   propertyAddress: string; propertyCity: string; propertyPostcode: string
   propertyDescription: string; collateralSummary: string
-  // Step 3
   loanAmount: string; propertyValuation: string; ltv: string
   investorApr: string; borrowerRate: string; loanDurationMonths: string
   minimumInvestment: string; originationDate: string; maturityDate: string
   actualClosingDate: string; actualDurationMonths: string
   repaymentType: string; exitRoute: string; targetRaise: string; penaltyProvisions: string
   totalDealIncome: string; investorIncome: string; companyIncome: string
-  // Step 4
   riskGrade: string; chargeType: string; instructedSolicitors: string
   valuationSource: string; underwritingSummary: string; keyStrengths: string
   keyRisks: string; downsideProtection: string; recoveryTimeMonths: string
@@ -31,7 +26,6 @@ interface FormData {
   wasDefaulted: boolean; collectionStartDate: string
   propertyRealizationPeriod: string; propertySalePrice: string
   fundsDistribution: string; dealComment: string
-  // Step 6
   visibleToInvestors: boolean; openForInvestment: boolean
   approvedInvestorsOnly: boolean; isFeatured: boolean; autoInvestEligible: boolean
   status: string
@@ -61,13 +55,40 @@ const INITIAL: FormData = {
   isFeatured: false, autoInvestEligible: true, status: 'DRAFT',
 }
 
+// ── Shared style tokens ────────────────────────────────────────────────────────
+const INPUT: React.CSSProperties = {
+  width: '100%', boxSizing: 'border-box',
+  padding: '9px 12px',
+  background: '#1A1C22',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: '8px',
+  color: '#E8E6DF',
+  fontSize: '13px',
+  fontFamily: 'inherit',
+  outline: 'none',
+}
+const INPUT_ERR: React.CSSProperties = { ...INPUT, border: '1px solid rgba(224,92,92,0.7)', background: '#1E1A1A' }
+const INPUT_READONLY: React.CSSProperties = { ...INPUT, background: '#141519', color: '#7C7A74', cursor: 'default' }
+const LABEL: React.CSSProperties = {
+  display: 'block', marginBottom: '6px',
+  fontSize: '10px', letterSpacing: '1.4px', textTransform: 'uppercase' as const,
+  color: '#5C5B57', fontWeight: 500,
+}
+const SECTION: React.CSSProperties = {
+  fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase' as const,
+  color: '#C4A355', borderBottom: '1px solid rgba(196,163,85,0.15)',
+  paddingBottom: '8px', marginBottom: '4px',
+}
+const GRID2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }
+const GRID3: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }
+const GRID4: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }
+
 export default function CreateDealPage() {
   const router = useRouter()
   const [step, setStep] = useState<Step>(1)
   const [form, setForm] = useState<FormData>(INITIAL)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [savedId, setSavedId] = useState<string | null>(null)
 
   function set(key: keyof FormData, value: string | boolean) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -116,12 +137,8 @@ export default function CreateDealPage() {
     })
     const data = await res.json()
     setLoading(false)
-    if (data.success) {
-      setSavedId(data.data.internalId)
-      alert(`Draft saved — ${data.data.internalId}`)
-    } else {
-      alert(data.error?.message ?? 'Save failed')
-    }
+    if (data.success) alert(`Draft saved — ${data.data.internalId}`)
+    else alert(data.error?.message ?? 'Save failed')
   }
 
   async function createAndPublish() {
@@ -134,12 +151,8 @@ export default function CreateDealPage() {
     })
     const data = await res.json()
     setLoading(false)
-    if (data.success) {
-      router.push(`/deals/${data.data.id}`)
-    } else {
-      setErrors(data.error?.fields ?? {})
-      alert(data.error?.message ?? 'Create failed')
-    }
+    if (data.success) router.push(`/deals/${data.data.id}`)
+    else { setErrors(data.error?.fields ?? {}); alert(data.error?.message ?? 'Create failed') }
   }
 
   function formToPayload(f: FormData) {
@@ -148,11 +161,11 @@ export default function CreateDealPage() {
       borrowerPurpose: f.borrowerPurpose, summary: f.summary,
       internalNotes: f.internalNotes, borrowerLegalName: f.borrowerLegalName,
       borrowerContact: f.borrowerContact, creditBackground: f.creditBackground,
-      underwriterNotes: f.underwriterNotes, propertyType: f.propertyType,
-      propertyAddress: f.propertyAddress, propertyCity: f.propertyCity,
-      propertyRegion: f.propertyRegion, propertyPostcode: f.propertyPostcode,
-      propertyDescription: f.propertyDescription, collateralSummary: f.collateralSummary,
-      occupancyStatus: f.occupancyStatus,
+      underwriterNotes: f.underwriterNotes, kycVerification: f.kycVerification || undefined,
+      propertyType: f.propertyType, propertyAddress: f.propertyAddress,
+      propertyCity: f.propertyCity, propertyRegion: f.propertyRegion,
+      propertyPostcode: f.propertyPostcode, propertyDescription: f.propertyDescription,
+      collateralSummary: f.collateralSummary, occupancyStatus: f.occupancyStatus,
       loanAmount: parseFloat(f.loanAmount) || 0,
       propertyValuation: parseFloat(f.propertyValuation) || 0,
       investorApr: parseFloat(f.investorApr) || 0,
@@ -175,7 +188,6 @@ export default function CreateDealPage() {
       keyRisks: f.keyRisks, downsideProtection: f.downsideProtection,
       recoveryTimeMonths: parseInt(f.recoveryTimeMonths) || undefined,
       scenarioNote: f.scenarioNote,
-      kycVerification: f.kycVerification || undefined,
       wasDefaulted: f.wasDefaulted,
       collectionStartDate: f.collectionStartDate || undefined,
       propertyRealizationPeriod: f.propertyRealizationPeriod || undefined,
@@ -188,259 +200,303 @@ export default function CreateDealPage() {
     }
   }
 
-  const F = (key: keyof FormData) => ({
-    value: form[key] as string,
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => set(key, e.target.value),
-    className: `w-full px-3 py-2 bg-[#18191E] border ${errors[key] ? 'border-[#E05C5C]' : 'border-[rgba(255,255,255,0.13)]'} rounded-lg text-[#E8E6DF] text-[12.5px] outline-none focus:border-[#C4A355] transition-colors placeholder:text-[#3E3D3B]`,
+  // ── Reusable field components (all inline styles) ──────────────────────────
+  const inp = (k: keyof FormData) => ({
+    value: form[k] as string,
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => set(k, e.target.value),
+    style: errors[k] ? INPUT_ERR : INPUT,
   })
 
-  const Label = ({ k, children }: { k: string; children: React.ReactNode }) => (
+  const Lbl = ({ children }: { children: React.ReactNode }) => (
+    <label style={LABEL}>{children}</label>
+  )
+
+  const Err = ({ k }: { k: keyof FormData }) =>
+    errors[k] ? <p style={{ marginTop: '4px', fontSize: '11px', color: '#E05C5C' }}>{errors[k]}</p> : null
+
+  const F = ({ k, label, ...rest }: { k: keyof FormData; label: string } & React.InputHTMLAttributes<HTMLInputElement>) => (
     <div>
-      <label className="block text-[9.5px] tracking-[1.2px] uppercase text-[#7C7A74] mb-1.5">
-        {children}
-      </label>
+      <Lbl>{label}</Lbl>
+      <input {...inp(k)} {...rest} style={errors[k] ? INPUT_ERR : { ...INPUT, ...(rest.style as any) }} />
+      <Err k={k} />
     </div>
   )
 
-  const Field = ({ k, label, ...props }: { k: keyof FormData; label: string } & React.InputHTMLAttributes<HTMLInputElement>) => (
+  const Sel = ({ k, label, options, display }: { k: keyof FormData; label: string; options: string[]; display?: string[] }) => (
     <div>
-      <label className="block text-[9.5px] tracking-[1.2px] uppercase text-[#7C7A74] mb-1.5">{label}</label>
-      <input {...F(k)} {...props} />
-      {errors[k] && <p className="mt-1 text-[11px] text-[#E05C5C]">{errors[k]}</p>}
-    </div>
-  )
-
-  const Select = ({ k, label, options }: { k: keyof FormData; label: string; options: string[] }) => (
-    <div>
-      <label className="block text-[9.5px] tracking-[1.2px] uppercase text-[#7C7A74] mb-1.5">{label}</label>
-      <select {...F(k)} style={{ appearance: 'none' }}>
+      <Lbl>{label}</Lbl>
+      <select {...inp(k)} style={{ ...INPUT, appearance: 'none' as any, WebkitAppearance: 'none', cursor: 'pointer' }}>
         <option value="">— Select —</option>
-        {options.map((o) => <option key={o}>{o}</option>)}
+        {options.map((o, i) => <option key={o} value={o}>{display ? display[i] : o}</option>)}
       </select>
+      <Err k={k} />
     </div>
   )
 
-  const Textarea = ({ k, label, rows = 3 }: { k: keyof FormData; label: string; rows?: number }) => (
+  const Ta = ({ k, label, rows = 3, placeholder }: { k: keyof FormData; label: string; rows?: number; placeholder?: string }) => (
     <div>
-      <label className="block text-[9.5px] tracking-[1.2px] uppercase text-[#7C7A74] mb-1.5">{label}</label>
-      <textarea {...F(k)} rows={rows}
-        className={`w-full px-3 py-2 bg-[#18191E] border border-[rgba(255,255,255,0.13)] rounded-lg text-[#E8E6DF] text-[12.5px] outline-none focus:border-[#C4A355] transition-colors resize-y placeholder:text-[#3E3D3B]`}
+      <Lbl>{label}</Lbl>
+      <textarea {...inp(k)} rows={rows} placeholder={placeholder}
+        style={{ ...INPUT, resize: 'vertical', lineHeight: '1.6', minHeight: `${rows * 24}px` }}
       />
     </div>
   )
 
-  const Toggle = ({ k, label, desc }: { k: keyof FormData; label: string; desc: string }) => (
-    <div className="flex items-center justify-between py-2.5 border-b border-[rgba(255,255,255,0.06)] last:border-0">
-      <div>
-        <div className="text-[12.5px]">{label}</div>
-        <div className="text-[10.5px] text-[#7C7A74] mt-0.5">{desc}</div>
+  const Tog = ({ k, label, desc, danger }: { k: keyof FormData; label: string; desc: string; danger?: boolean }) => {
+    const on = form[k] as boolean
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: on && danger ? 'rgba(224,92,92,0.06)' : on ? 'rgba(45,201,154,0.05)' : '#16181E', borderRadius: '8px', border: `1px solid ${on && danger ? 'rgba(224,92,92,0.25)' : on ? 'rgba(45,201,154,0.2)' : 'rgba(255,255,255,0.07)'}` }}>
+        <div>
+          <div style={{ fontSize: '13px', color: '#E8E6DF', fontWeight: 500 }}>{label}</div>
+          <div style={{ fontSize: '11px', color: '#5C5B57', marginTop: '2px' }}>{desc}</div>
+        </div>
+        <button type="button" onClick={() => set(k, !on)}
+          style={{ width: 42, height: 24, borderRadius: '12px', border: 'none', background: on ? (danger ? '#E05C5C' : '#2DC99A') : '#2A2C33', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s' }}>
+          <div style={{ position: 'absolute', top: 4, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', left: on ? 22 : 4 }} />
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={() => set(k, !form[k])}
-        className={`w-9 h-5 rounded-full border flex items-center transition-colors ${form[k] ? 'bg-[#2DC99A] border-[#2DC99A]' : 'bg-[#1A1C20] border-[rgba(255,255,255,0.13)]'}`}
-      >
-        <div className={`w-3.5 h-3.5 rounded-full transition-all mx-0.5 ${form[k] ? 'translate-x-4 bg-white' : 'bg-[#7C7A74]'}`} />
-      </button>
-    </div>
+    )
+  }
+
+  const SectionHeader = ({ children }: { children: React.ReactNode }) => (
+    <div style={SECTION}>{children}</div>
   )
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily: "'Outfit', sans-serif", color: '#E8E6DF', maxWidth: '800px', margin: '0 auto', padding: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <div style={{ fontSize: '15px', fontWeight: 600 }}>Create New Deal</div>
+    <div style={{ fontFamily: "'Outfit', sans-serif", color: '#E8E6DF', maxWidth: '860px', margin: '0 auto', padding: '28px 24px' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <div>
+          <div style={{ fontSize: '18px', fontWeight: 600, letterSpacing: '-0.3px' }}>Create New Deal</div>
+          <div style={{ fontSize: '12px', color: '#5C5B57', marginTop: '2px' }}>Step {step} of {STEPS.length} — {STEPS[step - 1]}</div>
+        </div>
         <button onClick={() => { if (confirm('Discard draft?')) router.push('/deals') }}
-          style={{ background: 'transparent', border: 'none', color: '#7C7A74', cursor: 'pointer', fontSize: '13px' }}>
+          style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: '#5C5B57', cursor: 'pointer', fontSize: '12px', padding: '7px 14px' }}>
           ✕ Discard
         </button>
       </div>
 
       {/* Step indicator */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
-        {STEPS.map((s, i) => (
-          <div key={s} style={{ display: 'flex', alignItems: 'center', flex: i < STEPS.length - 1 ? 1 : 'none' }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px', cursor: i + 1 <= step ? 'pointer' : 'default'
-            }} onClick={() => { if (i + 1 < step) setStep((i + 1) as Step) }}>
-              <div style={{
-                width: 26, height: 26, borderRadius: '50%',
-                border: `1.5px solid ${i + 1 < step ? '#2DC99A' : i + 1 === step ? '#C4A355' : 'rgba(255,255,255,0.13)'}`,
-                background: i + 1 < step ? 'rgba(45,201,154,0.1)' : i + 1 === step ? 'rgba(196,163,85,0.1)' : 'transparent',
-                color: i + 1 < step ? '#2DC99A' : i + 1 === step ? '#C4A355' : '#3E3D3B',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11, fontWeight: 600, flexShrink: 0,
-              }}>
-                {i + 1 < step ? '✓' : i + 1}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px', gap: '0' }}>
+        {STEPS.map((s, i) => {
+          const done = i + 1 < step
+          const active = i + 1 === step
+          return (
+            <div key={s} style={{ display: 'flex', alignItems: 'center', flex: i < STEPS.length - 1 ? 1 : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', cursor: done ? 'pointer' : 'default', flexShrink: 0 }}
+                onClick={() => { if (done) setStep((i + 1) as Step) }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                  border: `1.5px solid ${done ? '#2DC99A' : active ? '#C4A355' : 'rgba(255,255,255,0.1)'}`,
+                  background: done ? 'rgba(45,201,154,0.12)' : active ? 'rgba(196,163,85,0.12)' : 'transparent',
+                  color: done ? '#2DC99A' : active ? '#C4A355' : '#3E3D3B',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 700,
+                }}>
+                  {done ? '✓' : i + 1}
+                </div>
+                <span style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? '#E8E6DF' : done ? '#2DC99A' : '#3E3D3B', whiteSpace: 'nowrap' }}>
+                  {s}
+                </span>
               </div>
-              <span style={{ fontSize: 11, fontWeight: i + 1 === step ? 500 : 400, color: i + 1 === step ? '#E8E6DF' : i + 1 < step ? '#2DC99A' : '#7C7A74' }}>
-                {s}
-              </span>
+              {i < STEPS.length - 1 && (
+                <div style={{ flex: 1, height: 1, background: done ? 'rgba(45,201,154,0.4)' : 'rgba(255,255,255,0.06)', margin: '0 10px' }} />
+              )}
             </div>
-            {i < STEPS.length - 1 && (
-              <div style={{ flex: 1, height: 1, background: i + 1 < step ? '#2DC99A' : 'rgba(255,255,255,0.06)', margin: '0 8px' }} />
-            )}
-          </div>
-        ))}
+          )
+        })}
       </div>
 
-      {/* STEP CONTENT */}
-      <div style={{ background: '#0F1012', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '24px' }}>
+      {/* Card */}
+      <div style={{ background: '#0D0F13', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '28px' }}>
 
+        {/* ── STEP 1: Basics ── */}
         {step === 1 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color: '#C4A355', borderBottom: '1px solid rgba(196,163,85,0.15)', paddingBottom: '8px', marginBottom: '4px' }}>
-              Deal Information
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <SectionHeader>Deal Information</SectionHeader>
+            <div style={GRID2}>
+              <F k="name" label="Deal Name *" placeholder="e.g. Kensington Mews Bridge Loan" />
+              <Sel k="type" label="Deal Type *"
+                options={['BRIDGE_FINANCE', 'DEVELOPMENT_FINANCE', 'BUY_TO_LET', 'COMMERCIAL_BRIDGE', 'MEZZANINE']}
+                display={['Bridge Finance', 'Development Finance', 'Buy to Let', 'Commercial Bridge', 'Mezzanine']} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <Field k="name" label="Deal Name *" placeholder="e.g. Kensington Mews Bridge Loan" />
-              <Select k="type" label="Deal Type *" options={['BRIDGE_FINANCE', 'DEVELOPMENT_FINANCE', 'BUY_TO_LET', 'COMMERCIAL_BRIDGE', 'MEZZANINE']} />
-              <Select k="borrowerType" label="Borrower Type" options={['Individual investor', 'Property company (SPV)', 'Developer (LTD)', 'Family office']} />
-              <Field k="borrowerPurpose" label="Borrower Purpose" placeholder="e.g. Acquisition bridge" />
+            <div style={GRID2}>
+              <Sel k="borrowerType" label="Borrower Type"
+                options={['Individual', 'Property company (SPV)', 'Developer (LTD)', 'Family office', 'Business']}
+                display={['Individual / Private Person', 'Property Company (SPV)', 'Developer (LTD)', 'Family Office', 'Business']} />
+              <F k="borrowerPurpose" label="Loan Purpose" placeholder="e.g. Renovation, Business, Refinancing" />
             </div>
-            <Textarea k="summary" label="Investor-facing Summary *" rows={3} />
-            <Textarea k="internalNotes" label="Internal Notes (not visible to investors)" rows={2} />
-            <div style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color: '#C4A355', borderBottom: '1px solid rgba(196,163,85,0.15)', paddingBottom: '8px', marginTop: '8px' }}>
-              Borrower Intelligence — Internal Only
+            <Ta k="summary" label="Investor-facing Summary *" rows={3} placeholder="Describe this deal for investors..." />
+            <Ta k="internalNotes" label="Internal Notes (not visible to investors)" rows={2} placeholder="Admin-only notes..." />
+
+            <SectionHeader>Borrower Intelligence — Internal Only</SectionHeader>
+            <div style={GRID2}>
+              <F k="borrowerLegalName" label="Borrower Legal Name" placeholder="Not shown to investors" />
+              <F k="borrowerContact" label="Borrower Contact" placeholder="Phone / email" />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <Field k="borrowerLegalName" label="Borrower Legal Name" placeholder="Not shown to investors" />
-              <Field k="borrowerContact" label="Borrower Contact" />
-            </div>
-            <Textarea k="creditBackground" label="Credit Background" rows={2} />
-            <Textarea k="underwriterNotes" label="Underwriter Notes" rows={2} />
-            <Textarea k="kycVerification" label="Borrower Verification (KYC / Legal Clearance)" rows={2} />
+            <Ta k="creditBackground" label="Credit Background" rows={2} placeholder="Borrower credit history and background..." />
+            <Ta k="underwriterNotes" label="Underwriter Notes" rows={2} placeholder="Internal underwriting observations..." />
+            <Ta k="kycVerification" label="Borrower Verification (KYC / Legal Clearance)" rows={2} placeholder="KYC status, legal clearance notes..." />
           </div>
         )}
 
+        {/* ── STEP 2: Property ── */}
         {step === 2 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color: '#C4A355', borderBottom: '1px solid rgba(196,163,85,0.15)', paddingBottom: '8px' }}>Property Information</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
-              <Select k="propertyType" label="Property Type *" options={['Residential — House', 'Residential — Flat', 'HMO', 'Mixed-Use', 'Commercial — Retail', 'Commercial — Office', 'Development Site']} />
-              <Select k="propertyRegion" label="Region *" options={['London', 'South East England', 'South West England', 'North West England', 'North East England', 'Yorkshire & Humber', 'Midlands', 'Scotland', 'Wales']} />
-              <Select k="occupancyStatus" label="Occupancy" options={['Fully tenanted', 'Partially tenanted', 'Vacant', 'Under development']} />
-              <Field k="propertyAddress" label="Address" />
-              <Field k="propertyCity" label="City *" />
-              <Field k="propertyPostcode" label="Postcode" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <SectionHeader>Property Information</SectionHeader>
+            <div style={GRID3}>
+              <Sel k="propertyType" label="Property Type *"
+                options={['Apartment', 'House', 'Commercial', 'Land', 'HMO', 'Mixed-Use', 'Development Site']}
+                display={['Apartment / Flat', 'House', 'Commercial', 'Land', 'HMO', 'Mixed-Use', 'Development Site']} />
+              <Sel k="propertyRegion" label="Region *"
+                options={['London', 'South East England', 'South West England', 'North West England', 'North East England', 'Yorkshire & Humber', 'Midlands', 'Scotland', 'Wales']} />
+              <Sel k="occupancyStatus" label="Occupancy"
+                options={['Fully tenanted', 'Partially tenanted', 'Vacant', 'Under development']} />
             </div>
-            <Textarea k="propertyDescription" label="Property Description (investor-facing) *" rows={4} />
-            <Textarea k="collateralSummary" label="Collateral Summary" rows={2} />
+            <div style={GRID3}>
+              <F k="propertyAddress" label="Street Address" placeholder="e.g. 14 Elm Street" />
+              <F k="propertyCity" label="City / District *" placeholder="e.g. London, Manchester" />
+              <F k="propertyPostcode" label="Postcode" placeholder="e.g. SW1A 1AA" />
+            </div>
+            <Ta k="propertyDescription" label="Property Description (investor-facing)" rows={4} placeholder="Describe the property — type, condition, key features..." />
+            <Ta k="collateralSummary" label="Collateral Summary" rows={2} placeholder="Security and collateral details..." />
           </div>
         )}
 
+        {/* ── STEP 3: Financials ── */}
         {step === 3 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color: '#C4A355', borderBottom: '1px solid rgba(196,163,85,0.15)', paddingBottom: '8px' }}>Financial Terms</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '14px' }}>
-              <Field k="loanAmount" label="Loan Amount (£) *" type="number" onBlur={calcLtv} />
-              <Field k="propertyValuation" label="Valuation (£) *" type="number" onBlur={calcLtv} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <SectionHeader>Loan & Valuation</SectionHeader>
+            <div style={GRID4}>
+              <F k="loanAmount" label="Loan Amount (£) *" type="number" onBlur={calcLtv} placeholder="0" />
+              <F k="propertyValuation" label="Property Valuation (£) *" type="number" onBlur={calcLtv} placeholder="0" />
               <div>
-                <label style={{ display: 'block', fontSize: '9.5px', letterSpacing: '1.2px', textTransform: 'uppercase', color: '#7C7A74', marginBottom: '6px' }}>LTV (auto)</label>
-                <input value={form.ltv ? `${form.ltv}%` : ''} readOnly
-                  style={{ width: '100%', padding: '8px 12px', background: '#1A1C20', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '8px', color: Number(form.ltv) > 72 ? '#E05C5C' : '#E8E6DF', fontSize: '12.5px', outline: 'none', fontFamily: 'DM Mono, monospace' }}
-                />
+                <Lbl>LTV — Auto Calculated</Lbl>
+                <input value={form.ltv ? `${form.ltv}%` : '—'} readOnly
+                  style={{ ...INPUT_READONLY, color: Number(form.ltv) > 72 ? '#E05C5C' : form.ltv ? '#2DC99A' : '#5C5B57', fontFamily: 'monospace', fontWeight: 600 }} />
               </div>
-              <Field k="investorApr" label="Investor APR (%) *" type="number" step="0.1" />
-              <Field k="borrowerRate" label="Borrower Rate (% / month or year)" type="number" step="0.1" />
-              <Field k="loanDurationMonths" label="Planned Duration (months) *" type="number" />
-              <Field k="actualDurationMonths" label="Actual Duration (months, if closed)" type="number" />
-              <Field k="minimumInvestment" label="Min. Investment (£)" type="number" />
-              <Field k="targetRaise" label="Target Raise (£) *" type="number" />
-              <Field k="originationDate" label="Loan Issue Date" type="date" />
-              <Field k="maturityDate" label="Maturity Date (planned)" type="date" />
-              <Field k="actualClosingDate" label="Actual Closing Date (if closed)" type="date" />
-              <Select k="repaymentType" label="Repayment Type" options={['MONTHLY_INTEREST_BULLET', 'ROLLED_UP_BULLET', 'QUARTERLY_INTEREST_BULLET', 'AMORTISING']} />
-              <Field k="exitRoute" label="Exit Route" placeholder="e.g. Refinance" />
+              <F k="targetRaise" label="Target Raise (£) *" type="number" placeholder="0" />
             </div>
-            <Textarea k="penaltyProvisions" label="Penalty / Default Provisions" rows={2} />
-            <div style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color: '#C4A355', borderBottom: '1px solid rgba(196,163,85,0.15)', paddingBottom: '8px', marginTop: '8px' }}>
-              Income Breakdown
+
+            <SectionHeader>Rates & Terms</SectionHeader>
+            <div style={GRID4}>
+              <F k="investorApr" label="Investor APR (%) *" type="number" step="0.1" placeholder="0.0" />
+              <F k="borrowerRate" label="Borrower Rate (% / month or year)" type="number" step="0.1" placeholder="0.0" />
+              <F k="loanDurationMonths" label="Planned Duration (months) *" type="number" placeholder="12" />
+              <F k="actualDurationMonths" label="Actual Duration (months, if closed)" type="number" placeholder="—" />
+              <F k="minimumInvestment" label="Min. Investment (£)" type="number" placeholder="1000" />
+              <Sel k="repaymentType" label="Repayment Type"
+                options={['MONTHLY_INTEREST_BULLET', 'ROLLED_UP_BULLET', 'QUARTERLY_INTEREST_BULLET', 'AMORTISING']}
+                display={['Monthly Interest + Bullet', 'Rolled-Up Bullet', 'Quarterly Interest + Bullet', 'Amortising']} />
+              <F k="exitRoute" label="Exit Route" placeholder="e.g. Refinance, Sale" />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
-              <Field k="totalDealIncome" label="Total Deal Income" placeholder="e.g. £12,500" />
-              <Field k="investorIncome" label="Investor Income" placeholder="e.g. £10,000" />
-              <Field k="companyIncome" label="Company Income" placeholder="e.g. £2,500" />
+
+            <SectionHeader>Dates</SectionHeader>
+            <div style={GRID3}>
+              <F k="originationDate" label="Loan Issue Date" type="date" />
+              <F k="maturityDate" label="Maturity Date (planned)" type="date" />
+              <F k="actualClosingDate" label="Actual Closing Date (if closed)" type="date" />
             </div>
+
+            <Ta k="penaltyProvisions" label="Penalty / Default Provisions" rows={2} placeholder="Late payment penalties, default clauses..." />
+
             {Number(form.ltv) > 72 && (
-              <div style={{ background: 'rgba(224,92,92,0.1)', border: '1px solid rgba(224,92,92,0.2)', borderRadius: '8px', padding: '12px 14px', fontSize: '12px', color: '#E05C5C' }}>
-                ⚠ LTV {form.ltv}% exceeds the 72% policy limit. This deal will be flagged for credit committee review.
+              <div style={{ background: 'rgba(224,92,92,0.08)', border: '1px solid rgba(224,92,92,0.25)', borderRadius: '10px', padding: '13px 16px', fontSize: '12.5px', color: '#E05C5C', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <span style={{ fontSize: '16px' }}>⚠</span>
+                <span>LTV {form.ltv}% exceeds the 72% policy limit — this deal will be flagged for credit committee review.</span>
               </div>
             )}
+
+            <SectionHeader>Income Breakdown</SectionHeader>
+            <div style={GRID3}>
+              <F k="totalDealIncome" label="Total Deal Income" placeholder="e.g. £12,500" />
+              <F k="investorIncome" label="Investor Income" placeholder="e.g. £10,000" />
+              <F k="companyIncome" label="Company Income" placeholder="e.g. £2,500" />
+            </div>
           </div>
         )}
 
+        {/* ── STEP 4: Risk ── */}
         {step === 4 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color: '#C4A355', borderBottom: '1px solid rgba(196,163,85,0.15)', paddingBottom: '8px' }}>Risk & Underwriting</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
-              <Select k="riskGrade" label="Risk Grade *" options={['A', 'B', 'C', 'D']} />
-              <Select k="chargeType" label="Legal Charge *" options={['FIRST_CHARGE', 'SECOND_CHARGE', 'DEBENTURE']} />
-              <Field k="instructedSolicitors" label="Instructed Solicitors" />
-              <Field k="valuationSource" label="Valuation Source" placeholder="e.g. Savills · RICS" />
-              <Field k="recoveryTimeMonths" label="Est. Recovery Time (months)" type="number" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <SectionHeader>Risk & Underwriting</SectionHeader>
+            <div style={GRID3}>
+              <Sel k="riskGrade" label="Risk Grade *" options={['A', 'B', 'C', 'D']} display={['A — Low Risk', 'B — Medium Risk', 'C — Higher Risk', 'D — Speculative']} />
+              <Sel k="chargeType" label="Legal Charge *"
+                options={['FIRST_CHARGE', 'SECOND_CHARGE', 'DEBENTURE']}
+                display={['First Charge', 'Second Charge', 'Debenture']} />
+              <F k="instructedSolicitors" label="Instructed Solicitors" placeholder="e.g. Clifford Chance" />
             </div>
-            <Textarea k="underwritingSummary" label="Underwriting Summary (investor-facing)" rows={3} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <Textarea k="keyStrengths" label="Key Strengths" rows={3} />
-              <Textarea k="keyRisks" label="Key Risks" rows={3} />
+            <div style={GRID2}>
+              <F k="valuationSource" label="Valuation Source" placeholder="e.g. Savills · RICS" />
+              <F k="recoveryTimeMonths" label="Est. Recovery Time (months)" type="number" placeholder="—" />
             </div>
-            <Textarea k="downsideProtection" label="Downside Protection Summary (investor-facing)" rows={3} />
-            <Textarea k="scenarioNote" label="Stress-Test Scenario Note" rows={2} />
-            <div style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color: '#C4A355', borderBottom: '1px solid rgba(196,163,85,0.15)', paddingBottom: '8px', marginTop: '8px' }}>
-              Default Tracking
+            <Ta k="underwritingSummary" label="Underwriting Summary (investor-facing)" rows={3} placeholder="Summary of the underwriting decision..." />
+            <div style={GRID2}>
+              <Ta k="keyStrengths" label="Key Strengths" rows={3} placeholder="• Strong LTV&#10;• Experienced borrower..." />
+              <Ta k="keyRisks" label="Key Risks" rows={3} placeholder="• Planning risk&#10;• Market sensitivity..." />
             </div>
-            <Toggle k="wasDefaulted" label="Was There a Default?" desc="Toggle on if the borrower defaulted on this loan" />
+            <Ta k="downsideProtection" label="Downside Protection (investor-facing)" rows={3} placeholder="What protects investors if things go wrong..." />
+            <Ta k="scenarioNote" label="Stress-Test Scenario Note" rows={2} placeholder="What happens if property values drop 20%..." />
+
+            <SectionHeader>Default Tracking</SectionHeader>
+            <Tog k="wasDefaulted" label="Was There a Default?" desc="Toggle on if the borrower defaulted on this loan" danger />
             {form.wasDefaulted && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingLeft: '12px', borderLeft: '2px solid rgba(224,92,92,0.3)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <Field k="collectionStartDate" label="Collection Start Date" placeholder="e.g. 01/03/2025" />
-                  <Field k="propertyRealizationPeriod" label="Property Sale Period" placeholder="e.g. 4 months" />
-                  <Field k="propertySalePrice" label="Property Sale Price" placeholder="e.g. £380,000" />
-                  <Field k="fundsDistribution" label="How Funds Were Distributed" placeholder="e.g. £300k investor, £80k company" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingLeft: '16px', borderLeft: '2px solid rgba(224,92,92,0.35)', marginTop: '4px' }}>
+                <div style={GRID2}>
+                  <F k="collectionStartDate" label="Collection Start Date" placeholder="e.g. 01/03/2025" />
+                  <F k="propertyRealizationPeriod" label="Property Sale Period" placeholder="e.g. 4 months" />
+                  <F k="propertySalePrice" label="Property Sale Price" placeholder="e.g. £380,000" />
+                  <F k="fundsDistribution" label="How Funds Were Distributed" placeholder="e.g. £300k investor, £80k company" />
                 </div>
-                <Textarea k="dealComment" label="Brief Deal Comment" rows={3} />
+                <Ta k="dealComment" label="Brief Deal Comment" rows={3} placeholder="What happened, how it was resolved..." />
               </div>
             )}
           </div>
         )}
 
+        {/* ── STEP 5: Documents ── */}
         {step === 5 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color: '#C4A355', borderBottom: '1px solid rgba(196,163,85,0.15)', paddingBottom: '8px' }}>Documents</div>
-            <p style={{ fontSize: '12.5px', color: '#7C7A74', lineHeight: '1.7' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <SectionHeader>Documents</SectionHeader>
+            <p style={{ fontSize: '13px', color: '#5C5B57', lineHeight: '1.7', margin: 0 }}>
               Documents are uploaded after the deal is created. Save this deal as a draft first, then upload documents from the deal detail page.
-              Required before publishing: Valuation Report and Legal Pack.
             </p>
-            {[
-              { label: 'Valuation Report', required: true, desc: 'RICS-certified valuation · PDF' },
-              { label: 'Legal Pack', required: false, desc: 'Charge documents and legal structure' },
-              { label: 'Borrower Summary', required: false, desc: 'Anonymised · shown post-investment' },
-              { label: 'Term Sheet', required: false, desc: 'Executed term sheet' },
-              { label: 'Internal Credit Memo', required: false, desc: 'Internal only — not visible to investors' },
-            ].map(({ label, required, desc }) => (
-              <div key={label} style={{ border: '1.5px dashed rgba(255,255,255,0.13)', borderRadius: '8px', padding: '16px', textAlign: 'center', opacity: 0.5 }}>
-                <div style={{ fontSize: '20px', marginBottom: '6px' }}>📁</div>
-                <div style={{ fontSize: '12.5px', fontWeight: 500 }}>{label}{required ? ' *' : ''}</div>
-                <div style={{ fontSize: '11px', color: '#7C7A74', marginTop: '3px' }}>{desc}</div>
-                <div style={{ fontSize: '10px', color: '#3E3D3B', marginTop: '6px' }}>Available after deal is saved</div>
-              </div>
-            ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {[
+                { label: 'Valuation Report', required: true, desc: 'RICS-certified valuation · PDF' },
+                { label: 'Legal Pack', required: false, desc: 'Charge documents and legal structure' },
+                { label: 'Borrower Summary', required: false, desc: 'Anonymised · shown post-investment' },
+                { label: 'Term Sheet', required: false, desc: 'Executed term sheet' },
+                { label: 'Internal Credit Memo', required: false, desc: 'Internal only — not visible to investors' },
+              ].map(({ label, required, desc }) => (
+                <div key={label} style={{ border: '1.5px dashed rgba(255,255,255,0.08)', borderRadius: '10px', padding: '20px', textAlign: 'center', background: '#111215' }}>
+                  <div style={{ fontSize: '22px', marginBottom: '8px', opacity: 0.4 }}>📄</div>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: '#A8A69F' }}>{label}{required ? <span style={{ color: '#E05C5C' }}> *</span> : ''}</div>
+                  <div style={{ fontSize: '11px', color: '#3E3D3B', marginTop: '4px' }}>{desc}</div>
+                  <div style={{ fontSize: '10px', color: '#2A2C33', marginTop: '8px', fontStyle: 'italic' }}>Available after deal is saved</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
+        {/* ── STEP 6: Publish ── */}
         {step === 6 && (
-          <div>
-            <div style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color: '#C4A355', borderBottom: '1px solid rgba(196,163,85,0.15)', paddingBottom: '8px', marginBottom: '16px' }}>Publish Settings</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div>
-                <Toggle k="visibleToInvestors" label="Visible in Marketplace" desc="Deal appears in investor-facing feed" />
-                <Toggle k="openForInvestment" label="Open for Investment" desc="Investors can allocate capital" />
-                <Toggle k="isFeatured" label="Featured Deal" desc="Highlighted at top of marketplace" />
-                <Toggle k="autoInvestEligible" label="Auto-Invest Eligible" desc="Matched by auto-invest engine" />
-                <Toggle k="approvedInvestorsOnly" label="Approved Investors Only" desc="Platinum and Premium tier only" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <SectionHeader>Publish Settings</SectionHeader>
+            <div style={GRID2}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <Tog k="visibleToInvestors" label="Visible in Marketplace" desc="Deal appears in investor-facing feed" />
+                <Tog k="openForInvestment" label="Open for Investment" desc="Investors can allocate capital" />
+                <Tog k="isFeatured" label="Featured Deal" desc="Highlighted at top of marketplace" />
+                <Tog k="autoInvestEligible" label="Auto-Invest Eligible" desc="Matched by auto-invest engine" />
+                <Tog k="approvedInvestorsOnly" label="Approved Investors Only" desc="Platinum and Premium tier only" />
               </div>
-              <div>
-                <div style={{ fontSize: '10.5px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: '#7C7A74', marginBottom: '10px' }}>Pre-publish Checklist</div>
+              <div style={{ background: '#111215', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '18px' }}>
+                <div style={{ fontSize: '10px', letterSpacing: '1.5px', textTransform: 'uppercase', color: '#5C5B57', marginBottom: '14px', fontWeight: 600 }}>Pre-publish Checklist</div>
                 {[
                   { label: 'Deal name', ok: !!form.name },
                   { label: 'Deal type', ok: !!form.type },
@@ -451,9 +507,11 @@ export default function CreateDealPage() {
                   { label: 'Risk grade', ok: !!form.riskGrade },
                   { label: 'Target raise', ok: !!form.targetRaise },
                 ].map(({ label, ok }) => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', background: ok ? 'rgba(45,201,154,0.08)' : '#18191E', borderRadius: '6px', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '11px', color: ok ? '#2DC99A' : '#3E3D3B' }}>{ok ? '✓' : '○'}</span>
-                    <span style={{ fontSize: '12px', color: ok ? '#E8E6DF' : '#7C7A74' }}>{label}</span>
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', background: ok ? 'rgba(45,201,154,0.07)' : 'transparent', borderRadius: '6px', marginBottom: '4px' }}>
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: ok ? 'rgba(45,201,154,0.2)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontSize: '10px', color: ok ? '#2DC99A' : '#3E3D3B' }}>{ok ? '✓' : '·'}</span>
+                    </div>
+                    <span style={{ fontSize: '12.5px', color: ok ? '#C8C6BF' : '#4A4947' }}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -462,29 +520,29 @@ export default function CreateDealPage() {
         )}
       </div>
 
-      {/* Navigation buttons */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+      {/* Navigation */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
         <div>
           {step > 1 && (
             <button onClick={() => setStep((s) => (s - 1) as Step)}
-              style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.13)', background: 'transparent', color: '#E8E6DF', fontSize: '12.5px', cursor: 'pointer' }}>
+              style={{ padding: '9px 20px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#A8A69F', fontSize: '13px', cursor: 'pointer' }}>
               ← Back
             </button>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button onClick={saveDraft} disabled={loading}
-            style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.13)', background: 'transparent', color: '#7C7A74', fontSize: '12px', cursor: 'pointer' }}>
+            style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: '#5C5B57', fontSize: '12.5px', cursor: 'pointer' }}>
             Save Draft
           </button>
           {step < 6 ? (
             <button onClick={nextStep}
-              style={{ padding: '9px 20px', borderRadius: '8px', background: '#C4A355', color: '#0A0A0C', fontSize: '12.5px', fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+              style={{ padding: '10px 22px', borderRadius: '8px', background: '#C4A355', color: '#0A0A0C', fontSize: '13px', fontWeight: 700, border: 'none', cursor: 'pointer', letterSpacing: '0.2px' }}>
               Next: {STEPS[step]} →
             </button>
           ) : (
             <button onClick={createAndPublish} disabled={loading}
-              style={{ padding: '9px 20px', borderRadius: '8px', background: '#C4A355', color: '#0A0A0C', fontSize: '12.5px', fontWeight: 600, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>
+              style={{ padding: '10px 22px', borderRadius: '8px', background: '#C4A355', color: '#0A0A0C', fontSize: '13px', fontWeight: 700, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, letterSpacing: '0.2px' }}>
               {loading ? 'Creating...' : 'Create & Publish Deal →'}
             </button>
           )}

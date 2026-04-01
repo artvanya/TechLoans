@@ -7,9 +7,10 @@ import { DealEditForm } from '@/components/deal-edit-form'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminDealDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminDealDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const deal = await prisma.deal.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       documents: { where: { deletedAt: null }, orderBy: { uploadedAt: 'desc' } },
       images: { where: { deletedAt: null }, orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] },

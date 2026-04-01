@@ -9,11 +9,11 @@ import { InvestPanel } from '@/components/deals/invest-panel'
 
 export const dynamic = 'force-dynamic'
 
-export default async function DealDetailPage({ params }: { params: { id: string } }) {
+export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
 
   const deal = await prisma.deal.findFirst({
-    where: { id: params.id, visibleToInvestors: true, status: { in: ['LIVE', 'FUNDED', 'ACTIVE'] } },
+    where: { id: (await params).id, visibleToInvestors: true, status: { in: ['LIVE', 'FUNDED', 'ACTIVE'] } },
     include: {
       images: { where: { deletedAt: null }, orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] },
       documents: { where: { deletedAt: null, isInternal: false }, select: { id: true, category: true, fileName: true, uploadedAt: true } },

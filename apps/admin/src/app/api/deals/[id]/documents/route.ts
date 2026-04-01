@@ -7,12 +7,12 @@ import { writeAuditLog } from '@/lib/audit'
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
 
-  const deal = await prisma.deal.findUnique({ where: { id: params.id } })
+  const deal = await prisma.deal.findUnique({ where: { id: (await params).id } })
   if (!deal) return NextResponse.json({ success: false, error: { code: 'NOT_FOUND', message: 'Deal not found' } }, { status: 404 })
 
   const formData = await req.formData()
@@ -38,7 +38,7 @@ export async function POST(
     return NextResponse.json({ success: false, error: { code: err.code, message: err.message } }, { status: 400 })
   }
 
-  const storageKey = generateStorageKey(`deals/${params.id}/documents`, params.id, file.name)
+  const storageKey = generateStorageKey(`deals/${(await params).id}/documents`, (await params).id, file.name)
 
   try {
     await uploadFile(storageKey, buffer, file.type, true)
@@ -49,7 +49,7 @@ export async function POST(
 
   const doc = await prisma.dealDocument.create({
     data: {
-      dealId: params.id,
+      dealId: (await params).id,
       category: category as any,
       fileName: file.name,
       storageKey,
@@ -66,7 +66,7 @@ export async function POST(
     action: 'UPLOAD',
     entityType: 'DealDocument',
     entityId: doc.id,
-    metadata: { dealId: params.id, category, fileName: file.name, isInternal },
+    metadata: { dealId: (await params).id, category, fileName: file.name, isInternal },
   })
 
   return NextResponse.json({ success: true, data: { id: doc.id, category: doc.category, fileName: doc.fileName, uploadedAt: doc.uploadedAt } })
@@ -74,7 +74,7 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
@@ -83,7 +83,7 @@ export async function DELETE(
   const docId = searchParams.get('docId')
   if (!docId) return NextResponse.json({ success: false, error: { code: 'MISSING_PARAM', message: 'docId required' } }, { status: 400 })
 
-  const doc = await prisma.dealDocument.findFirst({ where: { id: docId, dealId: params.id } })
+  const doc = await prisma.dealDocument.findFirst({ where: { id: docId, dealId: (await params).id } })
   if (!doc) return NextResponse.json({ success: false, error: { code: 'NOT_FOUND', message: 'Document not found' } }, { status: 404 })
 
   // Soft delete in DB, then remove from storage
@@ -102,7 +102,7 @@ export async function DELETE(
     action: 'DELETE',
     entityType: 'DealDocument',
     entityId: docId,
-    metadata: { dealId: params.id, fileName: doc.fileName },
+    metadata: { dealId: (await params).id, fileName: doc.fileName },
   })
 
   return NextResponse.json({ success: true, data: { deleted: true } })

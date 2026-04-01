@@ -52,13 +52,13 @@ const updateDealSchema = z.object({
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
 
   const deal = await prisma.deal.findUnique({
-    where: { id: params.id },
+    where: { id: (await params).id },
     include: {
       documents: { where: { deletedAt: null } },
       images: { where: { deletedAt: null }, orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] },
@@ -75,7 +75,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
@@ -89,7 +89,7 @@ export async function PATCH(
     )
   }
 
-  const existing = await prisma.deal.findUnique({ where: { id: params.id } })
+  const existing = await prisma.deal.findUnique({ where: { id: (await params).id } })
   if (!existing) return NextResponse.json({ success: false, error: { code: 'NOT_FOUND', message: 'Deal not found' } }, { status: 404 })
 
   const updates: any = { ...parsed.data }
@@ -112,14 +112,14 @@ export async function PATCH(
     updates.visibleToInvestors = true
   }
 
-  const updated = await prisma.deal.update({ where: { id: params.id }, data: updates })
+  const updated = await prisma.deal.update({ where: { id: (await params).id }, data: updates })
 
   await writeAuditLog({
     actorId: (session.user as any).id,
     actorEmail: session.user.email!,
     action: parsed.data.status ? 'STATUS_CHANGE' : 'UPDATE',
     entityType: 'Deal',
-    entityId: params.id,
+    entityId: (await params).id,
     beforeState: { status: existing.status, visibleToInvestors: existing.visibleToInvestors },
     afterState: { status: updated.status, visibleToInvestors: updated.visibleToInvestors },
     ipAddress: req.headers.get('x-forwarded-for') ?? undefined,

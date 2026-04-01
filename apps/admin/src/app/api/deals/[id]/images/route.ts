@@ -10,7 +10,7 @@ const MAX_IMAGE_SIZE = 20 * 1024 * 1024 // 20MB
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
@@ -32,7 +32,7 @@ export async function POST(
     return NextResponse.json({ success: false, error: { code: 'FILE_TOO_LARGE', message: 'Image must be under 20MB' } }, { status: 400 })
   }
 
-  const storageKey = generateStorageKey(`deals/${params.id}/images`, params.id, file.name)
+  const storageKey = generateStorageKey(`deals/${(await params).id}/images`, (await params).id, file.name)
 
   try {
     await uploadFile(storageKey, buffer, file.type, true)
@@ -42,7 +42,7 @@ export async function POST(
 
   // Get current max sort order
   const maxOrder = await prisma.dealImage.findFirst({
-    where: { dealId: params.id, deletedAt: null },
+    where: { dealId: (await params).id, deletedAt: null },
     orderBy: { sortOrder: 'desc' },
     select: { sortOrder: true },
   })
@@ -50,18 +50,18 @@ export async function POST(
   // If making primary, unset existing primary
   if (makePrimary) {
     await prisma.dealImage.updateMany({
-      where: { dealId: params.id, isPrimary: true },
+      where: { dealId: (await params).id, isPrimary: true },
       data: { isPrimary: false },
     })
   }
 
   // Check if this is the first image — make it primary automatically
-  const existingCount = await prisma.dealImage.count({ where: { dealId: params.id, deletedAt: null } })
+  const existingCount = await prisma.dealImage.count({ where: { dealId: (await params).id, deletedAt: null } })
   const isPrimary = makePrimary || existingCount === 0
 
   const image = await prisma.dealImage.create({
     data: {
-      dealId: params.id,
+      dealId: (await params).id,
       storageKey,
       fileName: file.name,
       mimeType: file.type,
@@ -82,13 +82,13 @@ export async function POST(
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
 
   const images = await prisma.dealImage.findMany({
-    where: { dealId: params.id, deletedAt: null },
+    where: { dealId: (await params).id, deletedAt: null },
     orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
   })
 
@@ -107,7 +107,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
@@ -116,7 +116,7 @@ export async function PATCH(
   const { action, imageId, order } = body
 
   if (action === 'set_primary') {
-    await prisma.dealImage.updateMany({ where: { dealId: params.id }, data: { isPrimary: false } })
+    await prisma.dealImage.updateMany({ where: { dealId: (await params).id }, data: { isPrimary: false } })
     await prisma.dealImage.update({ where: { id: imageId }, data: { isPrimary: true } })
     return NextResponse.json({ success: true, data: { updated: true } })
   }
@@ -132,7 +132,7 @@ export async function PATCH(
   }
 
   if (action === 'delete') {
-    const img = await prisma.dealImage.findFirst({ where: { id: imageId, dealId: params.id } })
+    const img = await prisma.dealImage.findFirst({ where: { id: imageId, dealId: (await params).id } })
     if (!img) return NextResponse.json({ success: false, error: { code: 'NOT_FOUND', message: 'Image not found' } }, { status: 404 })
     await prisma.dealImage.update({ where: { id: imageId }, data: { deletedAt: new Date() } })
     try { await deleteFile(img.storageKey) } catch {}

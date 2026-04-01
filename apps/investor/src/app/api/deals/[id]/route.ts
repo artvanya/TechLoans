@@ -7,7 +7,7 @@ import type { ApiResponse, DealDetail } from '@nexus/shared'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) {
@@ -19,7 +19,7 @@ export async function GET(
 
   const deal = await prisma.deal.findFirst({
     where: {
-      id: params.id,
+      id: (await params).id,
       visibleToInvestors: true,
       status: { in: ['LIVE', 'FUNDED', 'ACTIVE'] },
     },

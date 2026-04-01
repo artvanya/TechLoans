@@ -19,13 +19,13 @@ const logEventSchema = z.object({
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
 
   const logs = await prisma.servicingLog.findMany({
-    where: { dealId: params.id },
+    where: { dealId: (await params).id },
     orderBy: { eventDate: 'desc' },
     include: { loggedBy: { select: { firstName: true, lastName: true } } },
   })
@@ -46,7 +46,7 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
@@ -62,7 +62,7 @@ export async function POST(
 
   const log = await prisma.servicingLog.create({
     data: {
-      dealId: params.id,
+      dealId: (await params).id,
       eventType: eventType as any,
       amount: amount ?? undefined,
       eventDate: new Date(eventDate),
@@ -80,7 +80,7 @@ export async function POST(
   }
   if (statusMap[eventType]) {
     await prisma.deal.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: { status: statusMap[eventType] as any },
     })
   }
@@ -91,7 +91,7 @@ export async function POST(
     action: 'UPDATE',
     entityType: 'ServicingLog',
     entityId: log.id,
-    metadata: { dealId: params.id, eventType, amount },
+    metadata: { dealId: (await params).id, eventType, amount },
   })
 
   return NextResponse.json({ success: true, data: { id: log.id } })

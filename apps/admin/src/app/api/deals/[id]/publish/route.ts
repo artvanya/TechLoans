@@ -7,14 +7,14 @@ import { runAutoInvestForDeal } from '@nexus/shared'
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
   }
 
-  const deal = await prisma.deal.findUnique({ where: { id: params.id } })
+  const deal = await prisma.deal.findUnique({ where: { id: (await params).id } })
   if (!deal) {
     return NextResponse.json({ success: false, error: { code: 'NOT_FOUND', message: 'Deal not found' } }, { status: 404 })
   }
@@ -28,7 +28,7 @@ export async function POST(
 
   // Publish the deal
   await prisma.deal.update({
-    where: { id: params.id },
+    where: { id: (await params).id },
     data: {
       status: 'LIVE',
       visibleToInvestors: true,
@@ -42,7 +42,7 @@ export async function POST(
     actorEmail: session.user.email!,
     action: 'PUBLISH',
     entityType: 'Deal',
-    entityId: params.id,
+    entityId: (await params).id,
     beforeState: { status: deal.status },
     afterState: { status: 'LIVE', publishedAt: new Date().toISOString() },
     ipAddress: req.headers.get('x-forwarded-for') ?? undefined,
@@ -52,8 +52,8 @@ export async function POST(
   // In production use a background queue (BullMQ, Inngest, etc.)
   setImmediate(async () => {
     try {
-      const result = await runAutoInvestForDeal(prisma, params.id)
-      console.log(`[AutoInvest] Deal ${params.id}: ${result.invested} investments, ${result.skipped} skipped`)
+      const result = await runAutoInvestForDeal(prisma, (await params).id)
+      console.log(`[AutoInvest] Deal ${(await params).id}: ${result.invested} investments, ${result.skipped} skipped`)
     } catch (err) {
       console.error('[AutoInvest] Engine error:', err)
     }
@@ -61,26 +61,26 @@ export async function POST(
 
   return NextResponse.json({
     success: true,
-    data: { id: params.id, status: 'LIVE', message: 'Deal published. Auto-invest engine triggered.' },
+    data: { id: (await params).id, status: 'LIVE', message: 'Deal published. Auto-invest engine triggered.' },
   })
 }
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
   }
 
-  const deal = await prisma.deal.findUnique({ where: { id: params.id } })
+  const deal = await prisma.deal.findUnique({ where: { id: (await params).id } })
   if (!deal) {
     return NextResponse.json({ success: false, error: { code: 'NOT_FOUND', message: 'Deal not found' } }, { status: 404 })
   }
 
   await prisma.deal.update({
-    where: { id: params.id },
+    where: { id: (await params).id },
     data: { visibleToInvestors: false, openForInvestment: false },
   })
 
@@ -89,9 +89,9 @@ export async function DELETE(
     actorEmail: session.user.email!,
     action: 'UNPUBLISH',
     entityType: 'Deal',
-    entityId: params.id,
+    entityId: (await params).id,
     afterState: { visibleToInvestors: false },
   })
 
-  return NextResponse.json({ success: true, data: { id: params.id, unpublished: true } })
+  return NextResponse.json({ success: true, data: { id: (await params).id, unpublished: true } })
 }

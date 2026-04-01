@@ -1,0 +1,18 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && pnpm turbo build --filter=@nexus/admin",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "outputDirectory": "apps/admin/.next",
+  "env": {
+    "DATABASE_URL": "@nexus-database-url",
+    "NEXTAUTH_SECRET": "@nexus-admin-auth-secret",
+    "NEXTAUTH_URL": "@nexus-admin-url",
+    "AWS_REGION": "@nexus-aws-region",
+    "AWS_ACCESS_KEY_ID": "@nexus-aws-key-id",
+    "AWS_SECRET_ACCESS_KEY": "@nexus-aws-secret",
+    "AWS_S3_BUCKET": "@nexus-s3-bucket",
+    "REDIS_URL": "@nexus-redis-url",
+    "ADMIN_ALLOWED_IPS": "@nexus-admin-allowed-ips"
+  }
+}

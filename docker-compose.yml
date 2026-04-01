@@ -1,0 +1,55 @@
+# docker-compose.yml — local development services
+# Run: docker compose up -d
+# This starts Postgres + Redis. Apps run via `pnpm dev` separately.
+
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexus_postgres
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexus_dev_password
+      POSTGRES_DB: nexus_development
+    ports:
+      - '5432:5432'
+    volumes:
+      - nexus_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nexus -d nexus_development']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus_redis
+    command: redis-server --requirepass nexus_redis_dev
+    ports:
+      - '6379:6379'
+    volumes:
+      - nexus_redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--auth', 'nexus_redis_dev', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Optional: pgAdmin for database exploration
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nexus_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@nexus.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - '5050:80'
+    depends_on:
+      - postgres
+    profiles:
+      - tools
+
+volumes:
+  nexus_pgdata:
+  nexus_redisdata:

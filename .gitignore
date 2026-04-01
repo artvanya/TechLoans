@@ -1,0 +1,56 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+.next
+.turbo
+dist
+build
+out
+
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development.local
+.env.test.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Database
+*.db
+*.sqlite
+
+# Prisma
+packages/db/prisma/migrations/*.sql
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea
+*.swp
+*.swo
+
+# Secrets / keys
+*.pem
+*.key
+*.p12
+fireblocks_key.pem
+
+# Test coverage
+coverage
+.nyc_output
+
+# Misc
+*.tsbuildinfo
+.vercel

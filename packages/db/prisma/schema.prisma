@@ -1,0 +1,876 @@
+// packages/db/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
+
+enum UserRole {
+  INVESTOR
+  ADMIN
+  SUPER_ADMIN
+  COMPLIANCE_OFFICER
+  SUPPORT
+}
+
+enum KycStatus {
+  NOT_STARTED
+  DOCUMENTS_REQUESTED
+  DOCUMENTS_SUBMITTED
+  UNDER_REVIEW
+  ADDITIONAL_INFO_REQUIRED
+  APPROVED
+  REJECTED
+  EXPIRED
+  REFRESH_REQUIRED
+}
+
+enum KycLevel {
+  STANDARD
+  ENHANCED
+  PLATINUM
+}
+
+enum InvestorTier {
+  STANDARD
+  PREMIUM
+  PLATINUM
+}
+
+enum DealStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  LIVE
+  FUNDED
+  ACTIVE
+  REPAID
+  DEFAULTED
+  CLOSED
+  REJECTED
+}
+
+enum DealType {
+  BRIDGE_FINANCE
+  DEVELOPMENT_FINANCE
+  BUY_TO_LET
+  COMMERCIAL_BRIDGE
+  MEZZANINE
+}
+
+enum RiskGrade {
+  A
+  B
+  C
+  D
+}
+
+enum ChargeType {
+  FIRST_CHARGE
+  SECOND_CHARGE
+  DEBENTURE
+}
+
+enum RepaymentType {
+  MONTHLY_INTEREST_BULLET
+  ROLLED_UP_BULLET
+  QUARTERLY_INTEREST_BULLET
+  AMORTISING
+}
+
+enum InvestmentStatus {
+  PENDING
+  CONFIRMED
+  ACTIVE
+  REPAID
+  DEFAULTED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  INVESTMENT
+  REPAYMENT_INTEREST
+  REPAYMENT_PRINCIPAL
+  FEE
+  PENALTY
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum PayoutStatus {
+  SCHEDULED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum WithdrawalStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+enum DocumentCategory {
+  VALUATION_REPORT
+  LEGAL_PACK
+  BORROWER_SUMMARY
+  COLLATERAL_DOCS
+  TERM_SHEET
+  INTERNAL_MEMO
+  KYC_IDENTITY
+  KYC_ADDRESS
+  SOURCE_OF_FUNDS
+  INVESTOR_AGREEMENT
+  OTHER
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  STATUS_CHANGE
+  LOGIN
+  LOGOUT
+  FAILED_LOGIN
+  PASSWORD_RESET
+  APPROVE
+  REJECT
+  PUBLISH
+  UNPUBLISH
+  UPLOAD
+  DOWNLOAD
+  EXPORT
+  PAYOUT_RUN
+  INVESTMENT
+  WITHDRAWAL_APPROVE
+  WITHDRAWAL_REJECT
+  KYC_APPROVE
+  KYC_REJECT
+  ROLE_CHANGE
+  ACCOUNT_RESTRICT
+  ACCOUNT_RESTORE
+  CREDIT_LINE_APPROVE
+}
+
+enum ServicingEventType {
+  INTEREST_RECEIVED
+  PRINCIPAL_REPAYMENT_FULL
+  PARTIAL_REPAYMENT
+  LATE_PAYMENT
+  PENALTY_APPLIED
+  MATURITY_EXTENSION
+  DEFAULT_NOTICE
+  LPA_RECEIVER_APPOINTED
+  PROPERTY_LISTED
+  COLLATERAL_SALE_COMPLETED
+  ENFORCEMENT_COMPLETED
+  DEAL_CLOSED
+  NOTE_ADDED
+}
+
+enum NotificationType {
+  INVESTMENT_CONFIRMED
+  INTEREST_PAID
+  PRINCIPAL_REPAID
+  DEAL_LIVE
+  KYC_APPROVED
+  KYC_REJECTED
+  KYC_MORE_INFO
+  KYC_REFRESH_DUE
+  WITHDRAWAL_APPROVED
+  WITHDRAWAL_PROCESSED
+  DEAL_UPDATE
+  SYSTEM_ALERT
+  ADMIN_MESSAGE
+}
+
+enum CreditLineStatus {
+  PENDING
+  APPROVED
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+}
+
+enum AutoInvestStatus {
+  ACTIVE
+  PAUSED
+  DISABLED
+}
+
+// ─────────────────────────────────────────
+// USERS & AUTH
+// ─────────────────────────────────────────
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  emailVerified     DateTime?
+  hashedPassword    String?
+  role              UserRole  @default(INVESTOR)
+  isActive          Boolean   @default(true)
+  isLocked          Boolean   @default(false)
+  lockReason        String?
+  failedLoginCount  Int       @default(0)
+  lastFailedLogin   DateTime?
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?   // encrypted TOTP secret
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  sessions          Session[]
+  investorProfile   InvestorProfile?
+  adminProfile      AdminProfile?
+  investments       Investment[]
+  transactions      Transaction[]
+  withdrawals       Withdrawal[]
+  notifications     Notification[]
+  auditLogsAsActor  AuditLog[]       @relation("AuditActor")
+  autoInvestRule    AutoInvestRule?
+  creditLine        CreditLine?
+  supportRequests   SupportRequest[]
+  passwordResets    PasswordReset[]
+  emailVerifications EmailVerification[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  sessionToken String   @unique
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionToken])
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  verifiedAt DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────
+// INVESTOR PROFILE
+// ─────────────────────────────────────────
+
+model InvestorProfile {
+  id                    String       @id @default(cuid())
+  userId                String       @unique
+  firstName             String
+  lastName              String
+  phone                 String?
+  dateOfBirth           DateTime?
+  nationality           String?
+  tier                  InvestorTier @default(STANDARD)
+  kycStatus             KycStatus    @default(NOT_STARTED)
+  kycLevel              KycLevel     @default(STANDARD)
+  kycApprovedAt         DateTime?
+  kycExpiresAt          DateTime?
+  kycRejectionReason    String?
+  isAccreditedInvestor  Boolean      @default(false)
+  investorClassification String?     // "HNWI", "Sophisticated", "Institutional"
+  suitabilityCompleted  Boolean      @default(false)
+  suitabilityCompletedAt DateTime?
+  agreementSigned       Boolean      @default(false)
+  agreementSignedAt     DateTime?
+  agreementRef          String?
+  bankAccountVerified   Boolean      @default(false)
+  maxSingleDealAmount   Decimal      @default(500000) @db.Decimal(15, 2)
+  notes                 String?      // internal only
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kycCases              KycCase[]
+  wallets               Wallet[]
+  whitelistedAddresses  WhitelistedAddress[]
+  bankAccounts          BankAccount[]
+
+  @@index([userId])
+  @@index([kycStatus])
+  @@index([tier])
+}
+
+model AdminProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  firstName    String
+  lastName     String
+  department   String?
+  permissions  String[] // array of permission strings
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  servicingLogs ServicingLog[]
+  payouts      Payout[]
+}
+
+// ─────────────────────────────────────────
+// KYC
+// ─────────────────────────────────────────
+
+model KycCase {
+  id                String           @id @default(cuid())
+  investorProfileId String
+  level             KycLevel
+  status            KycStatus        @default(DOCUMENTS_REQUESTED)
+  providerRef       String?          // Sumsub / Onfido reference
+  providerResult    Json?
+  reviewedById      String?
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  notes             String?
+  expiresAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  investorProfile   InvestorProfile  @relation(fields: [investorProfileId], references: [id])
+  documents         KycDocument[]
+
+  @@index([investorProfileId])
+  @@index([status])
+}
+
+model KycDocument {
+  id          String           @id @default(cuid())
+  kycCaseId   String
+  category    DocumentCategory
+  fileName    String
+  storageKey  String           // S3 / storage path
+  mimeType    String
+  sizeBytes   Int
+  uploadedAt  DateTime         @default(now())
+  deletedAt   DateTime?
+  kycCase     KycCase          @relation(fields: [kycCaseId], references: [id])
+}
+
+model SourceOfFundsRecord {
+  id                String   @id @default(cuid())
+  investorProfileId String
+  description       String
+  estimatedAmount   Decimal  @db.Decimal(15, 2)
+  currency          String   @default("GBP")
+  storageKey        String?
+  fileName          String?
+  status            String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedById      String?
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────
+// WALLET & ADDRESSES
+// ─────────────────────────────────────────
+
+model Wallet {
+  id                String          @id @default(cuid())
+  investorProfileId String
+  currency          String          // GBP, USDC, USDT, ETH
+  balance           Decimal         @default(0) @db.Decimal(20, 8)
+  fireblocksVaultId String?
+  fireblocksAddress String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  investorProfile   InvestorProfile @relation(fields: [investorProfileId], references: [id])
+  transactions      Transaction[]
+
+  @@unique([investorProfileId, currency])
+  @@index([investorProfileId])
+}
+
+model WhitelistedAddress {
+  id                String          @id @default(cuid())
+  investorProfileId String
+  address           String
+  network           String          // polygon, ethereum, etc.
+  label             String?
+  verifiedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  investorProfile   InvestorProfile @relation(fields: [investorProfileId], references: [id])
+}
+
+model BankAccount {
+  id                String          @id @default(cuid())
+  investorProfileId String
+  bankName          String
+  accountNumberMasked String
+  sortCode          String?
+  iban              String?
+  verifiedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  investorProfile   InvestorProfile @relation(fields: [investorProfileId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// DEALS
+// ─────────────────────────────────────────
+
+model Deal {
+  id                    String         @id @default(cuid())
+  internalId            String         @unique // NXSD-2026-001 format
+  name                  String
+  status                DealStatus     @default(DRAFT)
+  type                  DealType
+  borrowerType          String?
+  borrowerPurpose       String?
+  summary               String?        // investor-facing
+  internalNotes         String?        // admin only
+  borrowerLegalName     String?        // admin only
+  borrowerContact       String?        // admin only
+  creditBackground      String?        // admin only
+  underwriterNotes      String?        // admin only
+
+  // Property
+  propertyType          String?
+  propertyAddress       String?
+  propertyCity          String?
+  propertyRegion        String?
+  propertyPostcode      String?
+  propertyDescription   String?
+  collateralSummary     String?
+  occupancyStatus       String?
+
+  // Financials
+  loanAmount            Decimal        @db.Decimal(15, 2)
+  propertyValuation     Decimal        @db.Decimal(15, 2)
+  ltv                   Decimal        @db.Decimal(5, 2)
+  investorApr           Decimal        @db.Decimal(5, 2)
+  borrowerRate          Decimal?       @db.Decimal(5, 2)
+  platformMargin        Decimal?       @db.Decimal(5, 2)
+  minimumInvestment     Decimal        @default(1000) @db.Decimal(15, 2)
+  loanDurationMonths    Int
+  originationDate       DateTime?
+  maturityDate          DateTime?
+  expectedExitDate      DateTime?
+  repaymentType         RepaymentType  @default(MONTHLY_INTEREST_BULLET)
+  exitRoute             String?
+  arrangementFeePercent Decimal?       @db.Decimal(5, 2)
+  exitFeePercent        Decimal?       @db.Decimal(5, 2)
+  penaltyProvisions     String?
+
+  // Funding
+  targetRaise           Decimal        @db.Decimal(15, 2)
+  currentRaised         Decimal        @default(0) @db.Decimal(15, 2)
+
+  // Risk
+  riskGrade             RiskGrade?
+  chargeType            ChargeType     @default(FIRST_CHARGE)
+  legalStructureNotes   String?
+  instructedSolicitors  String?
+  valuationSource       String?
+  underwritingSummary   String?        // investor-facing
+  keyStrengths          String?
+  keyRisks              String?
+  downsideProtection    String?        // investor-facing
+  recoveryTimeMonths    Int?
+  stressTestLtv         Decimal?       @db.Decimal(5, 2)
+  scenarioNote          String?
+
+  // Closing & Outcome
+  actualClosingDate         DateTime?
+  actualDurationMonths      Int?
+  kycVerification           String?
+  totalDealIncome           String?
+  investorIncome            String?
+  companyIncome             String?
+
+  // Default / Collection
+  wasDefaulted              Boolean        @default(false)
+  collectionStartDate       String?
+  propertyRealizationPeriod String?
+  propertySalePrice         String?
+  fundsDistribution         String?
+  dealComment               String?
+
+  // Visibility
+  visibleToInvestors    Boolean        @default(false)
+  openForInvestment     Boolean        @default(false)
+  approvedInvestorsOnly Boolean        @default(false)
+  isFeatured            Boolean        @default(false)
+  autoInvestEligible    Boolean        @default(true)
+
+  // Timestamps
+  publishedAt           DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  createdById           String?
+
+  // Relations
+  documents             DealDocument[]
+  images                DealImage[]
+  investments           Investment[]
+  repaymentSchedule     RepaymentScheduleItem[]
+  servicingLogs         ServicingLog[]
+  updates               DealUpdate[]
+  @@index([status])
+  @@index([type])
+  @@index([propertyRegion])
+  @@index([visibleToInvestors])
+}
+
+model DealDocument {
+  id           String           @id @default(cuid())
+  dealId       String
+  category     DocumentCategory
+  fileName     String
+  storageKey   String
+  mimeType     String
+  sizeBytes    Int
+  isInternal   Boolean          @default(false)
+  uploadedById String?
+  uploadedAt   DateTime         @default(now())
+  deletedAt    DateTime?
+  deal         Deal             @relation(fields: [dealId], references: [id])
+
+  @@index([dealId])
+}
+
+model DealImage {
+  id           String   @id @default(cuid())
+  dealId       String
+  storageKey   String
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  isPrimary    Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  uploadedById String?
+  uploadedAt   DateTime @default(now())
+  deletedAt    DateTime?
+  deal         Deal     @relation(fields: [dealId], references: [id])
+
+  @@index([dealId])
+}
+
+model DealUpdate {
+  id          String   @id @default(cuid())
+  dealId      String
+  title       String
+  content     String
+  isPublic    Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+  deal        Deal     @relation(fields: [dealId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// INVESTMENTS & TRANSACTIONS
+// ─────────────────────────────────────────
+
+model Investment {
+  id            String          @id @default(cuid())
+  userId        String
+  dealId        String
+  amount        Decimal         @db.Decimal(15, 2)
+  status        InvestmentStatus @default(PENDING)
+  source        String?         // "manual", "auto-invest", "credit-line"
+  confirmedAt   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  user          User            @relation(fields: [userId], references: [id])
+  deal          Deal            @relation(fields: [dealId], references: [id])
+  transactions  Transaction[]
+  payouts       Payout[]
+
+  @@index([userId])
+  @@index([dealId])
+  @@index([status])
+}
+
+model Transaction {
+  id            String            @id @default(cuid())
+  userId        String
+  walletId      String?
+  investmentId  String?
+  type          TransactionType
+  status        TransactionStatus @default(PENDING)
+  amount        Decimal           @db.Decimal(20, 8)
+  currency      String            @default("GBP")
+  description   String?
+  reference     String?
+  txHash        String?           // blockchain tx hash if applicable
+  providerRef   String?
+  metadata      Json?
+  processedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id])
+  wallet        Wallet?           @relation(fields: [walletId], references: [id])
+  investment    Investment?       @relation(fields: [investmentId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Payout {
+  id            String      @id @default(cuid())
+  investmentId  String
+  type          String      // "interest" | "principal" | "penalty"
+  amount        Decimal     @db.Decimal(15, 2)
+  currency      String      @default("GBP")
+  status        PayoutStatus @default(SCHEDULED)
+  scheduledDate DateTime
+  processedAt   DateTime?
+  processedById String?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  investment    Investment  @relation(fields: [investmentId], references: [id])
+  processedBy   AdminProfile? @relation(fields: [processedById], references: [id])
+
+  @@index([investmentId])
+  @@index([status])
+  @@index([scheduledDate])
+}
+
+model Withdrawal {
+  id                String           @id @default(cuid())
+  userId            String
+  amount            Decimal          @db.Decimal(15, 2)
+  currency          String           @default("GBP")
+  destinationType   String           // "bank" | "crypto"
+  destinationRef    String?          // bank account id or crypto address id
+  status            WithdrawalStatus @default(PENDING)
+  reviewedById      String?
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  processedAt       DateTime?
+  providerRef       String?
+  notes             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  user              User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
+model RepaymentScheduleItem {
+  id            String      @id @default(cuid())
+  dealId        String
+  type          String      // "interest" | "principal"
+  scheduledDate DateTime
+  amount        Decimal     @db.Decimal(15, 2)
+  status        String      @default("SCHEDULED")
+  paidDate      DateTime?
+  paidAmount    Decimal?    @db.Decimal(15, 2)
+  notes         String?
+  createdAt     DateTime    @default(now())
+  deal          Deal        @relation(fields: [dealId], references: [id])
+
+  @@index([dealId])
+  @@index([scheduledDate])
+}
+
+// ─────────────────────────────────────────
+// SERVICING
+// ─────────────────────────────────────────
+
+model ServicingLog {
+  id          String             @id @default(cuid())
+  dealId      String
+  eventType   ServicingEventType
+  amount      Decimal?           @db.Decimal(15, 2)
+  eventDate   DateTime
+  notes       String?
+  loggedById  String?
+  createdAt   DateTime           @default(now())
+
+  deal        Deal               @relation(fields: [dealId], references: [id])
+  loggedBy    AdminProfile?      @relation(fields: [loggedById], references: [id])
+
+  @@index([dealId])
+}
+
+// ─────────────────────────────────────────
+// CREDIT LINE
+// ─────────────────────────────────────────
+
+model CreditLine {
+  id                  String           @id @default(cuid())
+  userId              String           @unique
+  approvedLimit       Decimal          @db.Decimal(15, 2)
+  utilised            Decimal          @default(0) @db.Decimal(15, 2)
+  status              CreditLineStatus @default(PENDING)
+  maxPerDeal          Decimal?         @db.Decimal(15, 2)
+  maxPerMonth         Decimal?         @db.Decimal(15, 2)
+  minApr              Decimal?         @db.Decimal(5, 2)
+  maxLtv              Decimal?         @db.Decimal(5, 2)
+  maxDurationMonths   Int?
+  permittedRiskGrades String[]
+  permittedLoanTypes  String[]
+  autoDrawEnabled     Boolean          @default(false)
+  approvedById        String?
+  approvedAt          DateTime?
+  expiresAt           DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  user                User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────
+// AUTO-INVEST
+// ─────────────────────────────────────────
+
+model AutoInvestRule {
+  id                  String          @id @default(cuid())
+  userId              String          @unique
+  status              AutoInvestStatus @default(PAUSED)
+  minApr              Decimal         @db.Decimal(5, 2)
+  maxLtv              Decimal         @db.Decimal(5, 2)
+  minDurationMonths   Int             @default(1)
+  maxDurationMonths   Int
+  maxPerDeal          Decimal         @db.Decimal(15, 2)
+  reserveCash         Decimal         @default(0) @db.Decimal(15, 2)
+  permittedRiskGrades String[]
+  permittedLoanTypes  String[]
+  permittedRegions    String[]
+  maxPerRegionPct     Decimal?        @db.Decimal(5, 2)
+  maxPerTypePct       Decimal?        @db.Decimal(5, 2)
+  reinvestRepayments  Boolean         @default(true)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  user                User            @relation(fields: [userId], references: [id])
+  matchLog            AutoInvestMatch[]
+}
+
+model AutoInvestMatch {
+  id             String   @id @default(cuid())
+  ruleId         String
+  dealId         String
+  matched        Boolean
+  skipReason     String?
+  amountDeployed Decimal? @db.Decimal(15, 2)
+  matchedAt      DateTime @default(now())
+  rule           AutoInvestRule @relation(fields: [ruleId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([readAt])
+}
+
+// ─────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  actorId      String?
+  actorEmail   String?
+  action       AuditAction
+  entityType   String
+  entityId     String?
+  beforeState  Json?
+  afterState   Json?
+  metadata     Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime    @default(now())
+
+  actor        User?       @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────
+// SUPPORT
+// ─────────────────────────────────────────
+
+model SupportRequest {
+  id          String   @id @default(cuid())
+  userId      String
+  subject     String
+  message     String
+  status      String   @default("OPEN")
+  assignedTo  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// PLATFORM SETTINGS
+// ─────────────────────────────────────────
+
+model PlatformSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}

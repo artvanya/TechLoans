@@ -1,0 +1,63 @@
+/* apps/investor/src/app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --nexus-bg:          #09090B;
+    --nexus-bg2:         #0F1012;
+    --nexus-bg3:         #141618;
+    --nexus-bg4:         #1A1C20;
+    --nexus-bg5:         #202328;
+    --nexus-border:      rgba(255, 255, 255, 0.06);
+    --nexus-border2:     rgba(255, 255, 255, 0.11);
+    --nexus-border3:     rgba(255, 255, 255, 0.18);
+    --nexus-text:        #EDEAE3;
+    --nexus-muted:       #7A7873;
+    --nexus-hint:        #3D3C3A;
+    --nexus-gold:        #BFA063;
+    --nexus-gold2:       #D4B57A;
+    --nexus-gold-dim:    rgba(191, 160, 99, 0.12);
+    --nexus-gold-glow:   rgba(191, 160, 99, 0.06);
+    --nexus-teal:        #2CC89A;
+    --nexus-teal-dim:    rgba(44, 200, 154, 0.10);
+    --nexus-red:         #E05555;
+    --nexus-red-dim:     rgba(224, 85, 85, 0.10);
+    --nexus-blue:        #5B9CF6;
+    --nexus-blue-dim:    rgba(91, 156, 246, 0.10);
+    --nexus-purple:      #9D8DF7;
+    --nexus-purple-dim:  rgba(157, 141, 247, 0.10);
+    --nexus-amber:       #E8A030;
+    --nexus-amber-dim:   rgba(232, 160, 48, 0.10);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.11) transparent;
+  }
+
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.11); border-radius: 2px; }
+}
+
+@layer utilities {
+  .font-serif  { font-family: var(--font-dm-serif), Georgia, serif; }
+  .font-mono   { font-family: var(--font-dm-mono), monospace; }
+  .font-sans   { font-family: var(--font-outfit), system-ui, sans-serif; }
+
+  .bg-nexus-bg    { background-color: var(--nexus-bg); }
+  .bg-nexus-bg2   { background-color: var(--nexus-bg2); }
+  .bg-nexus-bg3   { background-color: var(--nexus-bg3); }
+  .text-nexus-text    { color: var(--nexus-text); }
+  .text-nexus-muted   { color: var(--nexus-muted); }
+  .text-nexus-gold    { color: var(--nexus-gold); }
+  .text-nexus-teal    { color: var(--nexus-teal); }
+  .text-nexus-red     { color: var(--nexus-red); }
+  .border-nexus       { border-color: var(--nexus-border); }
+  .border-nexus2      { border-color: var(--nexus-border2); }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    { "path": "/api/cron/daily", "schedule": "0 8 * * *" }
+  ],
+  "buildCommand": "cd ../.. && pnpm turbo build --filter=@nexus/investor",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "outputDirectory": "apps/investor/.next",
+  "env": {
+    "DATABASE_URL": "@nexus-database-url",
+    "NEXTAUTH_SECRET": "@nexus-investor-auth-secret",
+    "NEXTAUTH_URL": "@nexus-investor-url",
+    "RESEND_API_KEY": "@nexus-resend-api-key",
+    "EMAIL_FROM": "@nexus-email-from",
+    "AWS_REGION": "@nexus-aws-region",
+    "AWS_ACCESS_KEY_ID": "@nexus-aws-key-id",
+    "AWS_SECRET_ACCESS_KEY": "@nexus-aws-secret",
+    "AWS_S3_BUCKET": "@nexus-s3-bucket",
+    "REDIS_URL": "@nexus-redis-url"
+  }
+}

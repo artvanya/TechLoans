@@ -1,6 +1,7 @@
 // apps/investor/src/app/(portal)/track-record/page.tsx
 import { prisma } from '@nexus/db'
 import { formatCurrency, formatPercent } from '@/lib/utils'
+import { getSignedDownloadUrl } from '@/lib/storage'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,6 +53,23 @@ export default async function TrackRecordPage() {
     take: 10,
     include: { actor: { select: { email: true } } },
   })
+
+  // Portfolio deals (track record entries)
+  const portfolioRaw = await prisma.deal.findMany({
+    where: { isPortfolio: true },
+    orderBy: { originationDate: 'desc' },
+    include: { images: { where: { isPrimary: true }, take: 1 } },
+  })
+
+  const portfolioDeals = await Promise.all(
+    portfolioRaw.map(async (d) => {
+      let imageUrl: string | null = null
+      if (d.images[0]) {
+        try { imageUrl = await getSignedDownloadUrl(d.images[0].storageKey, 3600) } catch {}
+      }
+      return { ...d, imageUrl }
+    })
+  )
 
   const kpis = [
     { label: 'Total Capital Originated', value: formatCurrency(totalCapital, 'GBP', true), sub: 'Since platform inception' },
@@ -122,6 +140,114 @@ export default async function TrackRecordPage() {
           ))}
         </div>
       </div>
+
+      {/* Portfolio deal cards */}
+      {portfolioDeals.length > 0 && (
+        <div>
+          <div className="text-[10px] tracking-[2px] uppercase text-nexus-gold mb-4">
+            Case Studies — {portfolioDeals.length} deal{portfolioDeals.length !== 1 ? 's' : ''}
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            {portfolioDeals.map((deal) => {
+              const statusLabel: Record<string, string> = {
+                ACTIVE: 'Active', REPAID: 'Closed', DEFAULTED: 'In Recovery',
+              }
+              const statusColor: Record<string, string> = {
+                ACTIVE: '#2CC89A', REPAID: '#5B9CF6', DEFAULTED: '#E05C5C',
+              }
+              const color = statusColor[deal.status] ?? '#7C7A74'
+              const label = statusLabel[deal.status] ?? deal.status
+              return (
+                <div key={deal.id} className="bg-nexus-bg2 border border-nexus rounded-xl overflow-hidden flex flex-col">
+                  {/* Image */}
+                  <div style={{ height: 160, background: '#0D0E11', position: 'relative', flexShrink: 0 }}>
+                    {deal.imageUrl ? (
+                      <img
+                        src={deal.imageUrl}
+                        alt={deal.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/>
+                        </svg>
+                      </div>
+                    )}
+                    {/* Status badge */}
+                    <div style={{
+                      position: 'absolute', top: 10, right: 10,
+                      background: `${color}22`, color, border: `1px solid ${color}44`,
+                      fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.8px',
+                      padding: '3px 8px', borderRadius: '5px',
+                    }}>
+                      {label.toUpperCase()}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Title + location */}
+                    <div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 600, marginBottom: '3px' }}>
+                        {deal.propertyType ?? 'Property'}{deal.propertyCity ? ` · ${deal.propertyCity}` : ''}
+                      </div>
+                      {deal.propertyRegion && (
+                        <div style={{ fontSize: '11px', color: '#7C7A74' }}>{deal.propertyRegion}</div>
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    {deal.propertyDescription && (
+                      <p style={{ fontSize: '11.5px', color: '#7C7A74', lineHeight: 1.6, margin: 0 }}>
+                        {deal.propertyDescription.length > 100
+                          ? deal.propertyDescription.slice(0, 100) + '…'
+                          : deal.propertyDescription}
+                      </p>
+                    )}
+
+                    {/* Key metrics */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                      {[
+                        { label: 'Loan', value: Number(deal.loanAmount) > 1 ? `£${(Number(deal.loanAmount) / 1000).toFixed(0)}k` : '—' },
+                        { label: 'LTV', value: Number(deal.ltv) > 0 ? `${Number(deal.ltv).toFixed(0)}%` : '—' },
+                        { label: 'Rate', value: Number(deal.investorApr) > 0 ? `${Number(deal.investorApr).toFixed(1)}%` : '—' },
+                      ].map(({ label, value }) => (
+                        <div key={label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '6px', padding: '8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'monospace' }}>{value}</div>
+                          <div style={{ fontSize: '9.5px', color: '#5C5B57', letterSpacing: '0.8px', textTransform: 'uppercase', marginTop: '2px' }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Dates */}
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '10.5px', color: '#5C5B57', marginTop: 'auto' }}>
+                      {deal.originationDate && (
+                        <span>Originated {deal.originationDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}</span>
+                      )}
+                      {deal.actualClosingDate && (
+                        <span>· Closed {deal.actualClosingDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}</span>
+                      )}
+                      {deal.actualDurationMonths && (
+                        <span>· {deal.actualDurationMonths}mo</span>
+                      )}
+                    </div>
+
+                    {/* Borrower info */}
+                    {(deal.borrowerType || deal.borrowerPurpose) && (
+                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px', fontSize: '11px', color: '#7C7A74' }}>
+                        {deal.borrowerType && <span>{deal.borrowerType}</span>}
+                        {deal.borrowerType && deal.borrowerPurpose && <span> · </span>}
+                        {deal.borrowerPurpose && <span>{deal.borrowerPurpose}</span>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

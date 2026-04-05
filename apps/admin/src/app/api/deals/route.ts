@@ -33,7 +33,7 @@ const createDealSchema = z.object({
   // Step 3: Financials
   loanAmount: z.number().positive(),
   propertyValuation: z.number().positive(),
-  investorApr: z.number().positive().max(50),
+  investorApr: z.number().min(0).max(50),
   borrowerRate: z.number().positive().max(50).optional(),
   platformMargin: z.number().optional(),
   minimumInvestment: z.number().positive().default(1000),
@@ -59,6 +59,9 @@ const createDealSchema = z.object({
   downsideProtection: z.string().optional(),
   recoveryTimeMonths: z.number().int().optional(),
 
+  // Portfolio flag
+  isPortfolio: z.boolean().default(false),
+
   // Publish settings
   visibleToInvestors: z.boolean().default(false),
   openForInvestment: z.boolean().default(false),
@@ -83,7 +86,7 @@ const createDealSchema = z.object({
   dealComment: z.string().optional(),
 
   // Status
-  status: z.enum(['DRAFT', 'UNDER_REVIEW', 'APPROVED', 'LIVE']).default('DRAFT'),
+  status: z.enum(['DRAFT', 'UNDER_REVIEW', 'APPROVED', 'LIVE', 'ACTIVE', 'REPAID', 'DEFAULTED', 'CLOSED']).default('DRAFT'),
 })
 
 function generateDealId(): string {
@@ -192,6 +195,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       propertySalePrice: data.propertySalePrice,
       fundsDistribution: data.fundsDistribution,
       dealComment: data.dealComment,
+      isPortfolio: data.isPortfolio,
       visibleToInvestors: data.visibleToInvestors,
       openForInvestment: data.openForInvestment,
       approvedInvestorsOnly: data.approvedInvestorsOnly,

@@ -5,15 +5,17 @@ import { getSession } from '@/lib/session'
 import Link from 'next/link'
 
 const NAV = [
-  { href: '/',             label: 'Overview',       icon: '⊞' },
-  { href: '/deals',        label: 'Deal Pipeline',  icon: '≡' },
-  { href: '/deals/create', label: 'Create Deal',    icon: '+' },
-  { href: '/repayments',   label: 'Repayments',     icon: '↑' },
-  { href: '/investors',    label: 'Investors',      icon: '◎' },
-  { href: '/withdrawals',  label: 'Withdrawals',    icon: '↓' },
-  { href: '/kyc',          label: 'KYC Queue',      icon: '✓' },
-  { href: '/audit',        label: 'Audit Log',      icon: '§' },
-  { href: '/settings',     label: 'Settings',       icon: '⚙' },
+  { href: '/',                        label: 'Overview',           icon: '⊞' },
+  { href: '/deals',                   label: 'Deal Pipeline',      icon: '≡' },
+  { href: '/deals/create',            label: 'Create Deal',        icon: '+' },
+  { href: '/deals/portfolio/create',  label: 'Add Portfolio',      icon: '◈' },
+  { href: '/deals/investment/create', label: 'Add Investment',     icon: '◆' },
+  { href: '/repayments',              label: 'Repayments',         icon: '↑' },
+  { href: '/investors',               label: 'Investors',          icon: '◎' },
+  { href: '/withdrawals',             label: 'Withdrawals',        icon: '↓' },
+  { href: '/kyc',                     label: 'KYC Queue',          icon: '✓' },
+  { href: '/audit',                   label: 'Audit Log',          icon: '§' },
+  { href: '/settings',                label: 'Settings',           icon: '⚙' },
 ]
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

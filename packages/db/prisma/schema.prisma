@@ -527,6 +527,9 @@ model Deal {
   fundsDistribution         String?
   dealComment               String?
 
+  // Category: portfolio (track record) vs open investment
+  isPortfolio           Boolean        @default(false)
+
   // Visibility
   visibleToInvestors    Boolean        @default(false)
   openForInvestment     Boolean        @default(false)

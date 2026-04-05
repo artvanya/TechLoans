@@ -5,11 +5,16 @@ import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
-interface SearchParams { status?: string; type?: string; region?: string; search?: string }
+interface SearchParams { status?: string; type?: string; region?: string; search?: string; portfolio?: string; investment?: string }
 
 export default async function AdminDealsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams
+  const showPortfolio  = params.portfolio === 'true'
+  const showInvestment = params.investment === 'true'
+
   const where: any = {
+    ...(showPortfolio  ? { isPortfolio: true } : {}),
+    ...(showInvestment ? { isPortfolio: false, openForInvestment: true } : {}),
     ...(params.status ? { status: params.status } : {}),
     ...(params.type ? { type: params.type } : {}),
     ...(params.region ? { propertyRegion: params.region } : {}),
@@ -20,13 +25,15 @@ export default async function AdminDealsPage({ searchParams }: { searchParams: P
     ]} : {}),
   }
 
-  const [deals, stats] = await Promise.all([
+  const [deals, stats, portfolioCount, investmentCount] = await Promise.all([
     prisma.deal.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
       include: { investments: { select: { id: true } } },
     }),
     prisma.deal.groupBy({ by: ['status'], _count: { id: true } }),
+    prisma.deal.count({ where: { isPortfolio: true } }),
+    prisma.deal.count({ where: { isPortfolio: false, openForInvestment: true } }),
   ])
 
   const statusCount = Object.fromEntries(stats.map(s => [s.status, s._count.id]))
@@ -40,11 +47,23 @@ export default async function AdminDealsPage({ searchParams }: { searchParams: P
   return (
     <div style={{ fontFamily: "'Outfit', sans-serif", color: '#E8E6DF', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-      {/* Status filter tabs */}
+      {/* Filter tabs */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Investments tab */}
+        <a href="?investment=true"
+          style={{ padding: '5px 12px', borderRadius: '20px', fontSize: '11.5px', fontWeight: 500, border: `1px solid ${showInvestment ? '#2CC89A' : 'rgba(255,255,255,0.07)'}`, color: showInvestment ? '#2CC89A' : '#7C7A74', background: showInvestment ? 'rgba(44,200,154,0.06)' : 'transparent', textDecoration: 'none' }}>
+          Investments {investmentCount > 0 && <span style={{ marginLeft: '4px', opacity: 0.7 }}>({investmentCount})</span>}
+        </a>
+        {/* Portfolio tab */}
+        <a href="?portfolio=true"
+          style={{ padding: '5px 12px', borderRadius: '20px', fontSize: '11.5px', fontWeight: 500, border: `1px solid ${showPortfolio ? '#C4A355' : 'rgba(255,255,255,0.07)'}`, color: showPortfolio ? '#C4A355' : '#7C7A74', background: showPortfolio ? 'rgba(196,163,85,0.06)' : 'transparent', textDecoration: 'none' }}>
+          Portfolio {portfolioCount > 0 && <span style={{ marginLeft: '4px', opacity: 0.7 }}>({portfolioCount})</span>}
+        </a>
+        <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)', margin: '0 2px' }} />
+        {/* Status tabs */}
         {[null, 'DRAFT', 'UNDER_REVIEW', 'APPROVED', 'LIVE', 'ACTIVE', 'FUNDED', 'REPAID', 'REJECTED'].map((s) => {
           const count = s ? (statusCount[s] ?? 0) : deals.length
-          const active = (params.status ?? null) === s
+          const active = !showPortfolio && !showInvestment && (params.status ?? null) === s
           return (
             <a key={s ?? 'all'} href={s ? `?status=${s}` : '/deals'}
               style={{ padding: '5px 12px', borderRadius: '20px', fontSize: '11.5px', fontWeight: 500, border: `1px solid ${active ? '#C4A355' : 'rgba(255,255,255,0.07)'}`, color: active ? '#C4A355' : '#7C7A74', background: active ? 'rgba(196,163,85,0.06)' : 'transparent', textDecoration: 'none', transition: 'all 0.15s' }}>
@@ -77,7 +96,19 @@ export default async function AdminDealsPage({ searchParams }: { searchParams: P
                 return (
                   <tr key={deal.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer' }}>
                     <td style={{ padding: '12px 14px' }}>
-                      <div style={{ fontSize: '12.5px', fontWeight: 500 }}>{deal.name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '12.5px', fontWeight: 500 }}>{deal.name}</span>
+                        {(deal as any).isPortfolio && (
+                          <span style={{ fontSize: '8.5px', fontWeight: 700, letterSpacing: '1px', padding: '1px 5px', borderRadius: '4px', background: 'rgba(196,163,85,0.12)', color: '#C4A355', flexShrink: 0 }}>
+                            PORTFOLIO
+                          </span>
+                        )}
+                        {!(deal as any).isPortfolio && deal.openForInvestment && (
+                          <span style={{ fontSize: '8.5px', fontWeight: 700, letterSpacing: '1px', padding: '1px 5px', borderRadius: '4px', background: 'rgba(44,200,154,0.12)', color: '#2CC89A', flexShrink: 0 }}>
+                            INVESTMENT
+                          </span>
+                        )}
+                      </div>
                       <div style={{ fontSize: '10px', color: '#7C7A74', fontFamily: "'DM Mono', monospace", marginTop: '2px' }}>{deal.internalId}</div>
                     </td>
                     <td style={{ padding: '12px 14px', fontSize: '11.5px', color: '#7C7A74' }}>{deal.type.replace(/_/g,' ')}</td>

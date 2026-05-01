@@ -6,6 +6,7 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "cd packages/db && npx prisma generate",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "db:generate": "turbo run db:generate",

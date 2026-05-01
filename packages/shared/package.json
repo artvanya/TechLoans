@@ -7,6 +7,9 @@
     ".": "./src/index.ts",
     "./src/*": "./src/*.ts"
   },
+  "dependencies": {
+    "@prisma/client": "^5.14.0"
+  },
   "devDependencies": {
     "typescript": "^5.4.0"
   }

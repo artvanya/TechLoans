@@ -12,6 +12,7 @@ export async function getSession() {
     })
     if (!user) throw new Error('[Dev] Seed user not found — run: cd packages/db && npx prisma db seed')
     return {
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       user: {
         id: user.id,
         email: user.email,

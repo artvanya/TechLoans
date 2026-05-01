@@ -13,9 +13,9 @@
     "db:studio": "cd packages/db && npx prisma studio"
   },
   "devDependencies": {
+    "pnpm": "^9.0.0",
     "turbo": "^2.0.0",
-    "typescript": "^5.4.0",
-    "pnpm": "^9.0.0"
+    "typescript": "^5.4.0"
   },
   "engines": {
     "node": ">=20.0.0",

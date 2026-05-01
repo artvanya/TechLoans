@@ -1,7 +1,7 @@
 // apps/investor/src/app/api/deals/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { prisma } from '@nexus/db'
+import { prisma, type Prisma } from '@nexus/db'
 import { getSignedDownloadUrl } from '@/lib/storage'
 import type { ApiResponse, DealSummary } from '@nexus/shared'
 
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const canSeeApprovedOnly =
     investorProfile?.tier === 'PLATINUM' || investorProfile?.tier === 'PREMIUM'
 
-  const where: Parameters<typeof prisma.deal.findMany>[0]['where'] = {
+  const where: Prisma.DealWhereInput = {
     visibleToInvestors: true,
     status: { in: ['LIVE', 'FUNDED', 'ACTIVE'] },
     ...(canSeeApprovedOnly ? {} : { approvedInvestorsOnly: false }),

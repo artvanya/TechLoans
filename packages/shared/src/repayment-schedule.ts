@@ -170,7 +170,7 @@ export async function generateInvestorPayouts(
   for (const schedItem of scheduleItems) {
     for (const investment of investments) {
       const investorShare = Number(investment.amount) / totalRaised
-      const investorAmount = Math.round(schedItem.amount * investorShare * 100) / 100
+      const investorAmount = Math.round(Number(schedItem.amount) * investorShare * 100) / 100
 
       if (investorAmount > 0) {
         // Check payout doesn't already exist

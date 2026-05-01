@@ -7,17 +7,18 @@ export const dynamic = 'force-dynamic'
 
 interface SearchParams { action?: string; entityType?: string; from?: string; to?: string; page?: string }
 
-export default async function AuditPage({ searchParams }: { searchParams: SearchParams }) {
-  const page = parseInt(searchParams.page ?? '1')
+export default async function AuditPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const sp = await searchParams
+  const page = parseInt(sp.page ?? '1')
   const pageSize = 50
 
   const where: any = {
-    ...(searchParams.action ? { action: searchParams.action } : {}),
-    ...(searchParams.entityType ? { entityType: searchParams.entityType } : {}),
-    ...(searchParams.from || searchParams.to ? {
+    ...(sp.action ? { action: sp.action } : {}),
+    ...(sp.entityType ? { entityType: sp.entityType } : {}),
+    ...(sp.from || sp.to ? {
       createdAt: {
-        ...(searchParams.from ? { gte: new Date(searchParams.from) } : {}),
-        ...(searchParams.to ? { lte: new Date(searchParams.to) } : {}),
+        ...(sp.from ? { gte: new Date(sp.from) } : {}),
+        ...(sp.to ? { lte: new Date(sp.to) } : {}),
       }
     } : {}),
   }
@@ -60,15 +61,15 @@ export default async function AuditPage({ searchParams }: { searchParams: Search
           { name: 'action', placeholder: 'Filter by action', options: ['CREATE','UPDATE','DELETE','STATUS_CHANGE','LOGIN','APPROVE','REJECT','PUBLISH','PAYOUT_RUN','INVESTMENT','KYC_APPROVE','KYC_REJECT','ACCOUNT_RESTRICT'] },
           { name: 'entityType', placeholder: 'Entity type', options: ['Deal','Investment','User','KycCase','Payout','Withdrawal','AdminSession'] },
         ].map(({ name, placeholder, options }) => (
-          <select key={name} name={name} defaultValue={(searchParams as any)[name] ?? ''}
+          <select key={name} name={name} defaultValue={(sp as any)[name] ?? ''}
             style={{ padding: '7px 10px', background: '#18191E', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '8px', color: '#E8E6DF', fontSize: '12px', outline: 'none', appearance: 'none' }}>
             <option value="">{placeholder}</option>
             {options.map((o) => <option key={o}>{o}</option>)}
           </select>
         ))}
-        <input type="date" name="from" defaultValue={searchParams.from ?? ''}
+        <input type="date" name="from" defaultValue={sp.from ?? ''}
           style={{ padding: '7px 10px', background: '#18191E', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '8px', color: '#E8E6DF', fontSize: '12px', outline: 'none' }} />
-        <input type="date" name="to" defaultValue={searchParams.to ?? ''}
+        <input type="date" name="to" defaultValue={sp.to ?? ''}
           style={{ padding: '7px 10px', background: '#18191E', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '8px', color: '#E8E6DF', fontSize: '12px', outline: 'none' }} />
         <button type="submit" style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '8px', color: '#E8E6DF', fontSize: '12px', cursor: 'pointer' }}>Apply</button>
         <a href="/audit" style={{ padding: '7px 14px', background: 'transparent', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', color: '#7C7A74', fontSize: '12px', textDecoration: 'none' }}>Clear</a>

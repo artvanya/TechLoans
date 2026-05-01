@@ -7,15 +7,16 @@ import { writeAuditLog } from '@/lib/audit'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string; docId: string } }
+  { params }: { params: Promise<{ id: string; docId: string }> }
 ): Promise<NextResponse> {
+  const { id, docId } = await params
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
   }
 
   const doc = await prisma.dealDocument.findFirst({
-    where: { id: params.docId, dealId: params.id, deletedAt: null },
+    where: { id: docId, dealId: id, deletedAt: null },
   })
 
   if (!doc) {
@@ -30,7 +31,7 @@ export async function GET(
     action: 'DOWNLOAD',
     entityType: 'DealDocument',
     entityId: doc.id,
-    metadata: { dealId: params.id, fileName: doc.fileName, isInternal: doc.isInternal },
+    metadata: { dealId: id, fileName: doc.fileName, isInternal: doc.isInternal },
     ipAddress: req.headers.get('x-forwarded-for') ?? undefined,
   })
 

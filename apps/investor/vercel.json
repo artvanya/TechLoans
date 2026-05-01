@@ -2,6 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [{ "path": "/api/cron/daily", "schedule": "0 8 * * *" }],
   "installCommand": "cd ../.. && pnpm install",
-  "buildCommand": "cd ../.. && cd packages/db && npx prisma generate && cd ../.. && pnpm turbo build --filter=@nexus/investor",
+  "buildCommand": "cd ../.. && cd packages/db && npx prisma generate && cd ../.. && pnpm --filter @nexus/investor exec next build",
   "framework": "nextjs"
 }

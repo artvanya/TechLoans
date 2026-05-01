@@ -10,8 +10,9 @@ import { writeAuditLog } from '@/lib/audit'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string; docId: string } }
+  { params }: { params: Promise<{ id: string; docId: string }> }
 ): Promise<NextResponse> {
+  const { id, docId } = await params
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
@@ -19,8 +20,8 @@ export async function GET(
 
   const doc = await prisma.dealDocument.findFirst({
     where: {
-      id: params.docId,
-      dealId: params.id,
+      id: docId,
+      dealId: id,
       deletedAt: null,
       isInternal: false,
     },
@@ -34,7 +35,7 @@ export async function GET(
   const investment = await prisma.investment.findFirst({
     where: {
       userId: session.user.id,
-      dealId: params.id,
+      dealId: id,
       status: { in: ['CONFIRMED', 'ACTIVE'] },
     },
   })
@@ -55,7 +56,7 @@ export async function GET(
       action: 'DOWNLOAD',
       entityType: 'DealDocument',
       entityId: doc.id,
-      metadata: { dealId: params.id, fileName: doc.fileName, category: doc.category },
+      metadata: { dealId: id, fileName: doc.fileName, category: doc.category },
       ipAddress: req.headers.get('x-forwarded-for') ?? undefined,
     })
 

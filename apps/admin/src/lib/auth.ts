@@ -9,6 +9,7 @@ import { writeAuditLog } from './audit'
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_OFFICER'] as const
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/login',

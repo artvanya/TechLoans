@@ -3,6 +3,7 @@
 // Simplified edit form for portfolio (track record) deals
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { DealImageManager } from './deal-image-manager'
 
 interface PortfolioData {
   id: string
@@ -75,7 +76,7 @@ export function PortfolioEditForm({ deal }: { deal: PortfolioData }) {
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'details' | 'financials' | 'outcome'>('details')
+  const [tab, setTab] = useState<'details' | 'financials' | 'outcome' | 'images'>('details')
 
   function set(k: keyof PortfolioData, v: any) {
     setForm(f => {
@@ -155,7 +156,7 @@ export function PortfolioEditForm({ deal }: { deal: PortfolioData }) {
     <div style={{ background: '#0F1012', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
       {/* Tab bar */}
       <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.07)', alignItems: 'center' }}>
-        {(['details', 'financials', 'outcome'] as const).map(t => (
+        {(['details', 'financials', 'outcome', 'images'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: '11px 18px', fontSize: '12.5px',
             fontWeight: tab === t ? 600 : 400,
@@ -164,7 +165,7 @@ export function PortfolioEditForm({ deal }: { deal: PortfolioData }) {
             borderBottom: `2px solid ${tab === t ? '#C4A355' : 'transparent'}`,
             cursor: 'pointer', textTransform: 'capitalize', marginBottom: '-1px',
           }}>
-            {t === 'details' ? 'Details' : t === 'financials' ? 'Financials' : 'Outcome'}
+            {t === 'details' ? 'Details' : t === 'financials' ? 'Financials' : t === 'outcome' ? 'Outcome' : 'Images'}
           </button>
         ))}
         <div style={{ flex: 1 }} />
@@ -375,6 +376,10 @@ export function PortfolioEditForm({ deal }: { deal: PortfolioData }) {
               </div>
             )}
           </div>
+        )}
+
+        {tab === 'images' && (
+          <DealImageManager dealId={deal.id} />
         )}
       </div>
     </div>

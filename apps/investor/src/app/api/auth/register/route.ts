@@ -5,8 +5,10 @@ import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
 const registerSchema = z.object({
-  email: z.string().email('Invalid email address').toLowerCase(),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  firstName: z.string().min(1, 'First name is required').max(60).trim(),
+  lastName:  z.string().min(1, 'Last name is required').max(60).trim(),
+  email:     z.string().email('Invalid email address').toLowerCase(),
+  password:  z.string().min(8, 'Password must be at least 8 characters'),
 })
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -27,12 +29,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     )
   }
 
-  const { email, password } = parsed.data
-
-  // Derive a display name from the email prefix
-  const emailPrefix = email.split('@')[0]
-  const firstName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
-  const lastName = ''
+  const { firstName, lastName, email, password } = parsed.data
 
   // Check for existing user — same response to avoid email enumeration
   const existing = await prisma.user.findUnique({ where: { email } })

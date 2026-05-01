@@ -1,7 +1,6 @@
 // apps/admin/src/lib/auth.ts
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
-import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@nexus/db'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
@@ -10,7 +9,6 @@ import { writeAuditLog } from './audit'
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_OFFICER'] as const
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/login',

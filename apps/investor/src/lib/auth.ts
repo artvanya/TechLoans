@@ -5,7 +5,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@nexus/db'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
-import { checkRateLimit, recordFailedLogin, clearFailedLogins } from './rate-limit'
+import { checkLoginRateLimit, recordFailedLogin, clearFailedLogins } from './rate-limit'
 import { writeAuditLog } from './audit'
 
 declare module 'next-auth' {
@@ -47,8 +47,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const ip = (req as any)?.headers?.['x-forwarded-for'] ?? 'unknown'
 
         // Rate limiting
-        const limited = await checkRateLimit(`login:${email}`, ip)
-        if (limited) {
+        const rateLimit = await checkLoginRateLimit(ip as string, email)
+        if (!rateLimit.allowed) {
           throw new Error('RATE_LIMITED')
         }
 
@@ -115,9 +115,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           ipAddress: ip as string,
         })
 
+        const fullName = [user.investorProfile?.firstName, user.investorProfile?.lastName]
+          .filter(Boolean).join(' ')
+
         return {
           id: user.id,
           email: user.email,
+          name: fullName || user.email,
           role: user.role,
           kycStatus: user.investorProfile?.kycStatus ?? 'NOT_STARTED',
           investorTier: user.investorProfile?.tier ?? 'STANDARD',

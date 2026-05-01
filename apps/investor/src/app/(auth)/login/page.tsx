@@ -18,7 +18,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard'
+  const callbackUrl = searchParams.get('callbackUrl') ?? '/portfolio'
   const urlError = searchParams.get('error')
 
   const registered = searchParams.get('registered') === '1'

@@ -2,6 +2,7 @@
 // apps/admin/src/components/investment-edit-form.tsx
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { DealImageManager } from './deal-image-manager'
 
 interface InvestmentDealData {
   id: string
@@ -44,7 +45,7 @@ export function InvestmentEditForm({ deal }: { deal: InvestmentDealData }) {
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'details' | 'financials' | 'visibility'>('details')
+  const [tab, setTab] = useState<'details' | 'financials' | 'visibility' | 'images'>('details')
 
   const projected = calcProjected(form.loanAmount, form.investorApr, form.loanDurationMonths)
 
@@ -98,9 +99,9 @@ export function InvestmentEditForm({ deal }: { deal: InvestmentDealData }) {
   return (
     <div style={{ background: '#0F1012', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
       <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.07)', alignItems: 'center' }}>
-        {(['details', 'financials', 'visibility'] as const).map(t => (
+        {(['details', 'financials', 'visibility', 'images'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ padding: '11px 18px', fontSize: '12.5px', fontWeight: tab === t ? 600 : 400, color: tab === t ? '#C4A355' : '#7C7A74', background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === t ? '#C4A355' : 'transparent'}`, cursor: 'pointer', textTransform: 'capitalize', marginBottom: '-1px' }}>
-            {t === 'details' ? 'Details' : t === 'financials' ? 'Financials' : 'Visibility'}
+            {t === 'details' ? 'Details' : t === 'financials' ? 'Financials' : t === 'visibility' ? 'Visibility' : 'Images'}
           </button>
         ))}
         <div style={{ flex: 1 }} />
@@ -227,6 +228,10 @@ export function InvestmentEditForm({ deal }: { deal: InvestmentDealData }) {
               </div>
             ))}
           </div>
+        )}
+
+        {tab === 'images' && (
+          <DealImageManager dealId={deal.id} />
         )}
       </div>
     </div>

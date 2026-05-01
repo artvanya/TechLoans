@@ -54,3 +54,6 @@ coverage
 # Misc
 *.tsbuildinfo
 .vercel
+
+# Local deal image uploads (use S3/R2 in deployed env)
+apps/admin/public/uploads/

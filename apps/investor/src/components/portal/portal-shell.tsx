@@ -8,21 +8,19 @@ import { cn } from '@/lib/utils'
 import type { Session } from 'next-auth'
 
 const NAV = [
-  { href: '/dashboard',    label: 'Dashboard',        group: 'Investor',
-    icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg> },
-  { href: '/deals',        label: 'Deal Origination',  group: 'Investor',
-    icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M2 4h12M2 8h9M2 12h6"/></svg> },
-  { href: '/portfolio',    label: 'Portfolio',         group: 'Investor',
+  { href: '/portfolio',    label: 'Portfolio',                  group: 'Investor',
     icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><polyline points="1,13 5,8 9,10 14,3"/><line x1="1" y1="15" x2="15" y2="15"/></svg> },
-  { href: '/track-record', label: 'Track Record',      group: 'Investor',
+  { href: '/deals',        label: 'Investment Opportunities',  group: 'Investor',
+    icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M2 4h12M2 8h9M2 12h6"/></svg> },
+  { href: '/track-record', label: 'Track Record',              group: 'Investor',
     icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="6.5"/><polyline points="5,8 7.5,10.5 11,6"/></svg> },
-  { href: '/wallet',       label: 'Wallet & Security', group: 'Capital',
+  { href: '/wallet',       label: 'Wallet & Security',         group: 'Capital',
     icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="1" y="4" width="14" height="10" rx="2"/><path d="M1 7.5h14"/><circle cx="11.5" cy="11" r="1" fill="currentColor" stroke="none"/></svg> },
-  { href: '/credit-line',  label: 'Credit Line',       group: 'Capital',
+  { href: '/credit-line',  label: 'Credit Line',               group: 'Capital',
     icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M2 8h12M8 2v12"/><circle cx="8" cy="8" r="6.5"/></svg> },
-  { href: '/auto-invest',  label: 'Auto-Invest',       group: 'Capital',
+  { href: '/auto-invest',  label: 'Auto-Invest',               group: 'Capital',
     icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v3.5l2.5 1.5"/></svg> },
-  { href: '/onboarding',   label: 'Account & KYC',    group: 'Account',
+  { href: '/onboarding',   label: 'Account & KYC',             group: 'Account',
     icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg> },
 ]
 
@@ -87,24 +85,7 @@ export function PortalShell({ session, children }: PortalShellProps) {
           ))}
         </nav>
 
-        {/* Admin console link */}
-        <div className="px-3 pb-2">
-          <a
-            href={process.env.NEXT_PUBLIC_ADMIN_URL ?? 'http://localhost:3001'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] text-nexus-muted border border-nexus hover:border-nexus-gold hover:text-nexus-gold transition-all group"
-          >
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" className="flex-shrink-0">
-              <rect x="1" y="1" width="14" height="14" rx="2"/>
-              <path d="M1 6h14M6 6v9"/>
-            </svg>
-            <span>Admin Console</span>
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-              <path d="M3 13L13 3M7 3h6v6"/>
-            </svg>
-          </a>
-        </div>
+
 
         {/* User footer */}
         <div className="p-4 border-t border-nexus">
@@ -141,8 +122,15 @@ export function PortalShell({ session, children }: PortalShellProps) {
               <span className="text-[10px] text-nexus-muted tracking-[0.5px]">All systems operational</span>
             </div>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <NotificationBell userId={user.id} />
+            {/* Investor name badge */}
+            <div className="flex items-center gap-2 pl-3 border-l border-nexus">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-nexus-gold to-[#7A5C20] flex items-center justify-center text-[10px] font-semibold text-white flex-shrink-0">
+                {initials}
+              </div>
+              <span className="text-[12.5px] font-medium text-nexus-text">{user.name ?? user.email}</span>
+            </div>
           </div>
         </header>
 

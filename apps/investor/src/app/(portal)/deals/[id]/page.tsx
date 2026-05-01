@@ -239,7 +239,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             remaining,
           }}
           availableBalance={availableBalance}
-          kycApproved={session!.user.kycStatus === 'APPROVED'}
+          kycApproved={investorProfile?.kycStatus === 'APPROVED'}
           existingInvestment={existingInvestment ? { id: existingInvestment.id, amount: Number(existingInvestment.amount) } : null}
         />
       </div>

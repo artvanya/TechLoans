@@ -59,21 +59,14 @@ export default async function AdminDealsPage({ searchParams }: { searchParams: P
           style={{ padding: '5px 12px', borderRadius: '20px', fontSize: '11.5px', fontWeight: 500, border: `1px solid ${showPortfolio ? '#C4A355' : 'rgba(255,255,255,0.07)'}`, color: showPortfolio ? '#C4A355' : '#7C7A74', background: showPortfolio ? 'rgba(196,163,85,0.06)' : 'transparent', textDecoration: 'none' }}>
           Portfolio {portfolioCount > 0 && <span style={{ marginLeft: '4px', opacity: 0.7 }}>({portfolioCount})</span>}
         </a>
-        <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)', margin: '0 2px' }} />
-        {/* Status tabs */}
-        {[null, 'DRAFT', 'UNDER_REVIEW', 'APPROVED', 'LIVE', 'ACTIVE', 'FUNDED', 'REPAID', 'REJECTED'].map((s) => {
-          const count = s ? (statusCount[s] ?? 0) : deals.length
-          const active = !showPortfolio && !showInvestment && (params.status ?? null) === s
-          return (
-            <a key={s ?? 'all'} href={s ? `?status=${s}` : '/deals'}
-              style={{ padding: '5px 12px', borderRadius: '20px', fontSize: '11.5px', fontWeight: 500, border: `1px solid ${active ? '#C4A355' : 'rgba(255,255,255,0.07)'}`, color: active ? '#C4A355' : '#7C7A74', background: active ? 'rgba(196,163,85,0.06)' : 'transparent', textDecoration: 'none', transition: 'all 0.15s' }}>
-              {s ?? 'All'} {count > 0 && <span style={{ marginLeft: '4px', opacity: 0.7 }}>({count})</span>}
-            </a>
-          )
-        })}
-        <Link href="/deals/create" style={{ marginLeft: 'auto', background: '#C4A355', color: '#0A0A0C', padding: '7px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
-          + New Deal
-        </Link>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+          <Link href="/deals/portfolio/create" style={{ background: 'rgba(196,163,85,0.1)', color: '#C4A355', border: '1px solid rgba(196,163,85,0.2)', padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
+            + Add Portfolio Case
+          </Link>
+          <Link href="/deals/investment/create" style={{ background: 'rgba(44,200,154,0.1)', color: '#2CC89A', border: '1px solid rgba(44,200,154,0.2)', padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
+            + Add Investment Opportunity
+          </Link>
+        </div>
       </div>
 
       {/* Table */}

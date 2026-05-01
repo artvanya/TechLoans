@@ -5,8 +5,16 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { Panel, PanelHeader } from '@/components/ui/panel'
 import { Badge } from '@/components/ui/badge'
 import { WalletActions } from '@/components/wallet/wallet-actions'
+import { TestFundsPanel } from '@/components/wallet/test-funds-panel'
 
 export const dynamic = 'force-dynamic'
+
+function testTopupEnabled() {
+  return (
+    process.env.NODE_ENV === 'development' ||
+    process.env.ENABLE_TEST_WALLET_TOPUP === 'true'
+  )
+}
 
 export default async function WalletPage() {
   const session = await getSession()
@@ -43,19 +51,24 @@ export default async function WalletPage() {
   const cryptoIcons: Record<string, string> = { USDC: '$', USDT: '₮', ETH: 'Ξ', GBP: '£' }
   const cryptoColors: Record<string, string> = { USDC: 'rgba(38,161,123,0.15)', USDT: 'rgba(38,161,123,0.15)', ETH: 'rgba(98,126,234,0.12)', GBP: 'rgba(191,160,99,0.12)' }
 
+  const showTestFunds = testTopupEnabled()
+
   return (
     <div className="flex flex-col gap-5 animate-fadeIn">
       {/* Hero balance */}
       <div className="bg-nexus-bg2 border border-nexus rounded-lg p-7">
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-6 flex-wrap">
+          <div className="min-w-0 flex-1">
             <div className="text-[9.5px] tracking-[2px] uppercase text-nexus-muted mb-3">Total Wallet Balance</div>
             <div className="font-mono text-[40px] font-medium tracking-[-2px] leading-none">{formatCurrency(totalGbp)}</div>
             <div className="text-[12.5px] text-nexus-muted mt-2">
               Across {profile?.wallets.length ?? 0} currencies · Fireblocks MPC custody · Verified source of funds
             </div>
           </div>
-          <WalletActions wallets={profile?.wallets.map(w => ({ id: w.id, currency: w.currency, balance: Number(w.balance) })) ?? []} bankAccounts={profile?.bankAccounts ?? []} whitelistedAddresses={profile?.whitelistedAddresses ?? []} />
+          <div className="flex flex-col items-stretch gap-3 w-full max-w-[320px]">
+            <TestFundsPanel enabled={showTestFunds} />
+            <WalletActions wallets={profile?.wallets.map(w => ({ id: w.id, currency: w.currency, balance: Number(w.balance) })) ?? []} bankAccounts={profile?.bankAccounts ?? []} whitelistedAddresses={profile?.whitelistedAddresses ?? []} />
+          </div>
         </div>
       </div>
 

@@ -2,6 +2,7 @@
 // apps/admin/src/components/deal-edit-form.tsx
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { DealImageManager } from './deal-image-manager'
 
 interface DealData {
   id: string; name: string; status: string; type: string
@@ -79,7 +80,7 @@ export function DealEditForm({ deal }: { deal: DealData }) {
 
   const s = { background: '#18191E', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '8px', color: '#E8E6DF', fontSize: '12.5px', outline: 'none', padding: '9px 12px', width: '100%', boxSizing: 'border-box' as const }
   const ta = { ...s, resize: 'vertical' as const, minHeight: '80px', lineHeight: 1.6 }
-  const tabs = ['basics', 'financials', 'risk', 'outcome', 'visibility']
+  const tabs = ['basics', 'financials', 'risk', 'outcome', 'visibility', 'images']
 
   return (
     <div style={{ background: '#0F1012', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
@@ -253,6 +254,10 @@ export function DealEditForm({ deal }: { deal: DealData }) {
               </div>
             ))}
           </div>
+        )}
+
+        {activeTab === 'images' && (
+          <DealImageManager dealId={deal.id} />
         )}
       </div>
     </div>

@@ -7,21 +7,22 @@ export const dynamic = 'force-dynamic'
 
 interface SearchParams { search?: string; tier?: string; kycStatus?: string; page?: string }
 
-export default async function InvestorsPage({ searchParams }: { searchParams: SearchParams }) {
-  const page = parseInt(searchParams.page ?? '1')
+export default async function InvestorsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const { page: pageParam, search, tier, kycStatus } = await searchParams
+  const page = parseInt(pageParam ?? '1')
   const pageSize = 30
 
   const where: any = {
     role: 'INVESTOR',
-    ...(searchParams.search ? {
+    ...(search ? {
       OR: [
-        { email: { contains: searchParams.search, mode: 'insensitive' } },
-        { investorProfile: { firstName: { contains: searchParams.search, mode: 'insensitive' } } },
-        { investorProfile: { lastName: { contains: searchParams.search, mode: 'insensitive' } } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { investorProfile: { firstName: { contains: search, mode: 'insensitive' } } },
+        { investorProfile: { lastName: { contains: search, mode: 'insensitive' } } },
       ],
     } : {}),
-    ...(searchParams.tier ? { investorProfile: { tier: searchParams.tier } } : {}),
-    ...(searchParams.kycStatus ? { investorProfile: { kycStatus: searchParams.kycStatus } } : {}),
+    ...(tier ? { investorProfile: { tier } } : {}),
+    ...(kycStatus ? { investorProfile: { kycStatus } } : {}),
   }
 
   const [users, total] = await Promise.all([
@@ -46,13 +47,13 @@ export default async function InvestorsPage({ searchParams }: { searchParams: Se
     <div style={{ fontFamily: "'Outfit', sans-serif", color: '#E8E6DF', display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         <form method="get" style={{ display: 'flex', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
-          <input name="search" defaultValue={searchParams.search ?? ''} placeholder="Search by name or email..."
+          <input name="search" defaultValue={search ?? ''} placeholder="Search by name or email..."
             style={{ flex: 1, minWidth: 220, padding: '7px 12px', background: '#18191E', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '8px', color: '#E8E6DF', fontSize: '12px', outline: 'none' }} />
           {[
             { name: 'tier', opts: ['STANDARD', 'PREMIUM', 'PLATINUM'], placeholder: 'All tiers' },
             { name: 'kycStatus', opts: ['APPROVED', 'UNDER_REVIEW', 'DOCUMENTS_SUBMITTED', 'NOT_STARTED', 'REJECTED'], placeholder: 'All KYC' },
           ].map(({ name, opts, placeholder }) => (
-            <select key={name} name={name} defaultValue={(searchParams as any)[name] ?? ''}
+            <select key={name} name={name} defaultValue={({ tier, kycStatus } as any)[name] ?? ''}
               style={{ padding: '7px 10px', background: '#18191E', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '8px', color: '#E8E6DF', fontSize: '12px', outline: 'none', appearance: 'none' }}>
               <option value="">{placeholder}</option>
               {opts.map((o) => <option key={o}>{o}</option>)}

@@ -5,17 +5,12 @@ import { getSession } from '@/lib/session'
 import Link from 'next/link'
 
 const NAV = [
-  { href: '/',                        label: 'Overview',           icon: '⊞' },
-  { href: '/deals',                   label: 'Deal Pipeline',      icon: '≡' },
-  { href: '/deals/create',            label: 'Create Deal',        icon: '+' },
-  { href: '/deals/portfolio/create',  label: 'Add Portfolio',      icon: '◈' },
-  { href: '/deals/investment/create', label: 'Add Investment',     icon: '◆' },
-  { href: '/repayments',              label: 'Repayments',         icon: '↑' },
-  { href: '/investors',               label: 'Investors',          icon: '◎' },
-  { href: '/withdrawals',             label: 'Withdrawals',        icon: '↓' },
-  { href: '/kyc',                     label: 'KYC Queue',          icon: '✓' },
-  { href: '/audit',                   label: 'Audit Log',          icon: '§' },
-  { href: '/settings',                label: 'Settings',           icon: '⚙' },
+  { href: '/',                        label: 'Overview',                    icon: '⊞' },
+  { href: '/deals',                   label: 'Deal Pipeline',               icon: '≡' },
+  { href: '/deals/portfolio/create',  label: 'Add Portfolio Case',          icon: '◈' },
+  { href: '/deals/investment/create', label: 'Add Investment Opportunity',  icon: '◆' },
+  { href: '/investors',               label: 'Investors',                   icon: '◎' },
+  { href: '/kyc',                     label: 'KYC Queue',                   icon: '✓' },
 ]
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -110,16 +105,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div style={{ fontSize: '13px', color: '#7C7A74', fontFamily: "'DM Mono', monospace" }}>
             {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
           </div>
-          <Link
-            href="/deals/create"
-            style={{
-              background: '#C4A355', color: '#0A0A0C',
-              padding: '6px 14px', borderRadius: '7px',
-              fontSize: '12px', fontWeight: 600, textDecoration: 'none',
-            }}
-          >
-            + New Deal
-          </Link>
+          <div style={{ fontSize: '13px', color: '#7C7A74', fontFamily: "'DM Mono', monospace" }}>
+            Nexus Admin
+          </div>
         </header>
 
         {/* Page */}

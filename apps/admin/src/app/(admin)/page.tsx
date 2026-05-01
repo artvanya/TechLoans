@@ -8,13 +8,22 @@ export const dynamic = 'force-dynamic'
 export default async function AdminOverviewPage() {
   const session = await getSession()
 
-  const [dealStats, investorCount, payoutsMonth, auditRecent, kycQueue, alerts] = await Promise.all([
+  const [dealStats, investorCount, payoutsMonth, auditRecent, kycQueue, alerts, recentInvestments] = await Promise.all([
     prisma.deal.groupBy({ by: ['status'], _count: { id: true }, _sum: { currentRaised: true } }),
     prisma.user.count({ where: { role: 'INVESTOR', isActive: true } }),
     prisma.payout.aggregate({ where: { status: 'SCHEDULED', scheduledDate: { gte: new Date(new Date().setDate(1)) } }, _sum: { amount: true }, _count: true }),
     prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 8, include: { actor: { select: { email: true } } } }),
     prisma.kycCase.count({ where: { status: { in: ['DOCUMENTS_SUBMITTED', 'UNDER_REVIEW'] } } }),
     prisma.deal.findMany({ where: { status: 'UNDER_REVIEW' }, select: { id: true, name: true, ltv: true, internalId: true, updatedAt: true }, take: 5, orderBy: { updatedAt: 'desc' } }),
+    prisma.investment.findMany({
+      where: { status: { in: ['CONFIRMED', 'ACTIVE', 'REPAID', 'DEFAULTED'] } },
+      orderBy: [{ confirmedAt: 'desc' }, { createdAt: 'desc' }],
+      take: 15,
+      include: {
+        user: { select: { email: true } },
+        deal: { select: { id: true, name: true, internalId: true } },
+      },
+    }),
   ])
 
   const activeAUM = dealStats.filter(d => ['LIVE','ACTIVE','FUNDED'].includes(d.status)).reduce((s, d) => s + Number(d._sum.currentRaised ?? 0), 0)
@@ -25,6 +34,7 @@ export default async function AdminOverviewPage() {
     CREATE: '#5B9CF6', UPDATE: '#E8A030', STATUS_CHANGE: '#9D8DF7',
     APPROVE: '#2CC89A', REJECT: '#E05C5C', LOGIN: '#BFA063',
     UPLOAD: '#5B9CF6', PAYOUT_RUN: '#2CC89A', KYC_APPROVE: '#2CC89A', KYC_REJECT: '#E05C5C',
+    INVESTMENT: '#BFA063',
   }
 
   return (
@@ -45,15 +55,63 @@ export default async function AdminOverviewPage() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+      {/* Recent investments — full width */}
+      <div style={{ background: '#0F1012', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ padding: '13px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '12.5px', fontWeight: 600 }}>Recent investments</div>
+            <div style={{ fontSize: '10.5px', color: '#7C7A74', marginTop: '3px' }}>Latest allocations across all live deals · GBP</div>
+          </div>
+          <a href="/deals?investment=true" style={{ fontSize: '11px', color: '#C4A355', textDecoration: 'none' }}>Deal pipeline →</a>
+        </div>
+        {recentInvestments.length === 0 ? (
+          <div style={{ padding: '28px', textAlign: 'center', color: '#7C7A74', fontSize: '12px' }}>No investments recorded yet</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Investor', 'Deal', 'Amount', 'Status', 'Source', 'Date', ''].map((h) => (
+                  <th key={h || 'a'} style={{ fontSize: '9px', letterSpacing: '1.5px', textTransform: 'uppercase', color: '#3E3D3B', fontWeight: 500, padding: '8px 14px', textAlign: h === '' ? 'right' : 'left', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {recentInvestments.map((inv) => (
+                <tr key={inv.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                  <td style={{ padding: '11px 14px', fontSize: '12px' }}>{inv.user.email}</td>
+                  <td style={{ padding: '11px 14px' }}>
+                    <div style={{ fontSize: '12.5px', fontWeight: 500 }}>{inv.deal.name}</div>
+                    <div style={{ fontSize: '10px', color: '#7C7A74', marginTop: '2px', fontFamily: "'DM Mono', monospace" }}>{inv.deal.internalId}</div>
+                  </td>
+                  <td style={{ padding: '11px 14px', fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: 500, color: '#2CC89A' }}>
+                    {formatCurrency(Number(inv.amount))}
+                  </td>
+                  <td style={{ padding: '11px 14px' }}>
+                    <span style={{ background: 'rgba(44,200,154,0.1)', color: '#2CC89A', fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '5px' }}>{inv.status}</span>
+                  </td>
+                  <td style={{ padding: '11px 14px', fontSize: '11px', color: '#7C7A74' }}>{inv.source ?? 'manual'}</td>
+                  <td style={{ padding: '11px 14px', fontSize: '11px', color: '#7C7A74', fontFamily: "'DM Mono', monospace" }}>
+                    {formatDate((inv.confirmedAt ?? inv.createdAt).toISOString(), 'short')}
+                  </td>
+                  <td style={{ padding: '11px 14px', textAlign: 'right' }}>
+                    <a href={`/deals/${inv.deal.id}`} style={{ fontSize: '11px', color: '#C4A355', textDecoration: 'none' }}>Deal →</a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
-        {/* Alerts */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 0.9fr) 1.1fr', gap: '14px', alignItems: 'start' }}>
+
+        {/* Alerts — compact column */}
         <div style={{ background: '#0F1012', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
           <div style={{ padding: '13px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontSize: '12.5px', fontWeight: 600 }}>⚠ Active Alerts</div>
             <div style={{ fontSize: '10px', color: '#7C7A74' }}>{alerts.length + kycQueue} items</div>
           </div>
-          <div style={{ padding: '0 16px' }}>
+          <div style={{ padding: '0 16px', minHeight: '200px' }}>
             {kycQueue > 0 && (
               <div style={{ display: 'flex', gap: '10px', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                 <span style={{ background: 'rgba(232,160,48,0.1)', color: '#E8A030', fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '5px', flexShrink: 0 }}>KYC</span>
@@ -78,18 +136,18 @@ export default async function AdminOverviewPage() {
               </div>
             ))}
             {alerts.length === 0 && kycQueue === 0 && (
-              <div style={{ padding: '20px 0', textAlign: 'center', color: '#7C7A74', fontSize: '12px' }}>No active alerts</div>
+              <div style={{ padding: '24px 0', textAlign: 'center', color: '#7C7A74', fontSize: '12px' }}>No active alerts</div>
             )}
           </div>
         </div>
 
-        {/* Audit log */}
+        {/* Audit log — taller column */}
         <div style={{ background: '#0F1012', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
           <div style={{ padding: '13px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontSize: '12.5px', fontWeight: 600 }}>Audit Log — Recent</div>
             <a href="/audit" style={{ fontSize: '11px', color: '#C4A355', textDecoration: 'none' }}>View all →</a>
           </div>
-          <div>
+          <div style={{ minHeight: '200px' }}>
             {auditRecent.map((log) => (
               <div key={log.id} style={{ display: 'flex', gap: '10px', padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', alignItems: 'center' }}>
                 <span style={{ background: `${actionColors[log.action] ?? '#7C7A74'}18`, color: actionColors[log.action] ?? '#7C7A74', fontSize: '9px', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', flexShrink: 0, letterSpacing: '0.3px' }}>

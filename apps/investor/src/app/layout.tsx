@@ -34,8 +34,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${outfit.variable} ${dmSerif.variable} ${dmMono.variable}`}>
-      <body className="bg-nexus-bg text-nexus-text antialiased">
+    <html lang="en" className={`${outfit.variable} ${dmSerif.variable} ${dmMono.variable}`} suppressHydrationWarning>
+      <body className="bg-nexus-bg text-nexus-text antialiased" suppressHydrationWarning>
         <SessionProvider>
           {children}
           <Toaster />

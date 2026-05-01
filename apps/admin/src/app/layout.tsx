@@ -2,6 +2,7 @@
 // Root layout for admin — only used by pages outside the (admin) group (e.g. /login)
 // The (admin)/layout.tsx provides the full shell for authenticated pages
 import type { Metadata } from 'next'
+import { SessionProvider } from 'next-auth/react'
 
 export const metadata: Metadata = {
   title: 'Nexus Admin',
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function AdminRootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -25,7 +26,9 @@ export default function AdminRootLayout({ children }: { children: React.ReactNod
           *::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.11); border-radius: 2px; }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body suppressHydrationWarning>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   )
 }

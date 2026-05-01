@@ -1,19 +1,8 @@
 'use client'
 // apps/admin/src/app/login/page.tsx
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-
-const ERROR_MSGS: Record<string, string> = {
-  NOT_ADMIN: 'This account does not have operator access.',
-  ACCOUNT_LOCKED: 'Account locked after repeated failed attempts. Contact your system administrator.',
-  ACCESS_DENIED: 'Access denied from this IP address.',
-  CredentialsSignin: 'Invalid email or password.',
-  default: 'Login failed. Please try again.',
-}
 
 export default function AdminLoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,14 +10,33 @@ export default function AdminLoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError(null); setLoading(true)
-    const res = await signIn('admin-credentials', { email, password, redirect: false })
-    setLoading(false)
-    if (res?.error) { setError(ERROR_MSGS[res.error] ?? ERROR_MSGS.default); return }
-    router.push('/')
+    setError(null)
+    setLoading(true)
+    try {
+      const res = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? 'Login failed. Please try again.')
+        return
+      }
+      window.location.href = '/'
+    } catch {
+      setError('Network error. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const inputStyle = { width: '100%', padding: '10px 13px', background: '#18191E', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '8px', color: '#E8E6DF', fontSize: '13px', outline: 'none', boxSizing: 'border-box' as const }
+  const inputStyle = {
+    width: '100%', padding: '10px 13px',
+    background: '#18191E', border: '1px solid rgba(255,255,255,0.13)',
+    borderRadius: '8px', color: '#E8E6DF', fontSize: '13px',
+    outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit',
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0A0A0C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", color: '#E8E6DF' }}>
@@ -51,13 +59,13 @@ export default function AdminLoginPage() {
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '9.5px', letterSpacing: '1.5px', textTransform: 'uppercase', color: '#7C7A74', marginBottom: '6px' }}>Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" style={inputStyle} placeholder="operator@nexusprivatecredit.com" />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" style={inputStyle} placeholder="admin@nexus.local" />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '9.5px', letterSpacing: '1.5px', textTransform: 'uppercase', color: '#7C7A74', marginBottom: '6px' }}>Password</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" style={inputStyle} placeholder="••••••••••••" />
             </div>
-            <button type="submit" disabled={loading} style={{ padding: '12px', background: '#C4A355', color: '#0A0A0C', border: 'none', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <button type="submit" disabled={loading} style={{ padding: '12px', background: '#C4A355', color: '#0A0A0C', border: 'none', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, marginTop: '6px', fontFamily: 'inherit' }}>
               {loading ? 'Signing in...' : 'Sign in to console'}
             </button>
           </form>

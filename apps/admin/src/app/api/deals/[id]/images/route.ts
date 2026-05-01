@@ -37,6 +37,7 @@ export async function POST(
   try {
     await uploadFile(storageKey, buffer, file.type, true)
   } catch (err) {
+    console.error('[images/upload] Storage error:', err)
     return NextResponse.json({ success: false, error: { code: 'STORAGE_ERROR', message: 'Image upload failed' } }, { status: 500 })
   }
 

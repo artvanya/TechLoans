@@ -14,7 +14,7 @@ const reviewSchema = z.object({
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { caseId: string } }
+  { params }: { params: Promise<{ caseId: string }> }
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
@@ -23,6 +23,8 @@ export async function POST(
   if (!['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_OFFICER'].includes(role)) {
     return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'KYC review requires compliance role' } }, { status: 403 })
   }
+
+  const { caseId } = await params
 
   const body = await req.json()
   const parsed = reviewSchema.safeParse(body)
@@ -33,7 +35,7 @@ export async function POST(
   const { action, rejectionReason, notes, kycLevel } = parsed.data
 
   const kycCase = await prisma.kycCase.findUnique({
-    where: { id: params.caseId },
+    where: { id: caseId },
     include: { investorProfile: { include: { user: true } } },
   })
 
@@ -48,7 +50,7 @@ export async function POST(
 
     await prisma.$transaction([
       prisma.kycCase.update({
-        where: { id: params.caseId },
+        where: { id: caseId },
         data: { status: 'APPROVED', reviewedById: operatorId, reviewedAt: now, notes, expiresAt },
       }),
       prisma.investorProfile.update({
@@ -71,12 +73,12 @@ export async function POST(
       actorEmail: session.user.email!,
       action: 'KYC_APPROVE',
       entityType: 'KycCase',
-      entityId: params.caseId,
+      entityId: caseId,
       beforeState: { status: kycCase.status },
       afterState: { status: 'APPROVED', level: kycLevel },
     })
 
-    return NextResponse.json({ success: true, data: { action: 'approved', caseId: params.caseId } })
+    return NextResponse.json({ success: true, data: { action: 'approved', caseId } })
   }
 
   if (action === 'reject') {
@@ -86,7 +88,7 @@ export async function POST(
 
     await prisma.$transaction([
       prisma.kycCase.update({
-        where: { id: params.caseId },
+        where: { id: caseId },
         data: { status: 'REJECTED', reviewedById: operatorId, reviewedAt: now, rejectionReason, notes },
       }),
       prisma.investorProfile.update({
@@ -103,17 +105,17 @@ export async function POST(
       actorEmail: session.user.email!,
       action: 'KYC_REJECT',
       entityType: 'KycCase',
-      entityId: params.caseId,
+      entityId: caseId,
       beforeState: { status: kycCase.status },
       afterState: { status: 'REJECTED', rejectionReason },
     })
 
-    return NextResponse.json({ success: true, data: { action: 'rejected', caseId: params.caseId } })
+    return NextResponse.json({ success: true, data: { action: 'rejected', caseId } })
   }
 
   if (action === 'request_info') {
     await prisma.kycCase.update({
-      where: { id: params.caseId },
+      where: { id: caseId },
       data: { status: 'ADDITIONAL_INFO_REQUIRED', reviewedById: operatorId, notes },
     })
     await prisma.investorProfile.update({
@@ -121,7 +123,7 @@ export async function POST(
       data: { kycStatus: 'ADDITIONAL_INFO_REQUIRED' },
     })
     // TODO: Send KYC_MORE_INFO notification
-    return NextResponse.json({ success: true, data: { action: 'info_requested', caseId: params.caseId } })
+    return NextResponse.json({ success: true, data: { action: 'info_requested', caseId } })
   }
 
   return NextResponse.json({ success: false, error: { code: 'UNKNOWN_ACTION', message: 'Unknown action' } }, { status: 400 })

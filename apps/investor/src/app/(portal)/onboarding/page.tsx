@@ -4,6 +4,7 @@ import { prisma } from '@nexus/db'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { KycUploadForm } from '@/components/onboarding/kyc-upload-form'
+import { RequestVerificationCard } from '@/components/onboarding/request-verification-card'
 
 export const dynamic = 'force-dynamic'
 
@@ -99,7 +100,7 @@ export default async function OnboardingPage() {
     },
   ]
 
-  const needsUpload = ['NOT_STARTED', 'DOCUMENTS_REQUESTED', 'ADDITIONAL_INFO_REQUIRED'].includes(kycStatus)
+  const showKycActions = ['NOT_STARTED', 'DOCUMENTS_REQUESTED', 'ADDITIONAL_INFO_REQUIRED', 'REJECTED'].includes(kycStatus)
 
   return (
     <div className="flex flex-col gap-5 animate-fadeIn max-w-[700px] mx-auto w-full">
@@ -111,14 +112,16 @@ export default async function OnboardingPage() {
         </p>
       </div>
 
-      {needsUpload && (
-        <div className="bg-nexus-gold/[0.06] border border-nexus-gold/10 rounded-lg p-5">
-          <div className="text-[10.5px] tracking-[1.5px] uppercase text-nexus-gold mb-3">Action Required — Upload Identity Documents</div>
-          <p className="text-[12.5px] text-nexus-muted leading-[1.7] mb-4">
-            Please upload a clear copy of your passport or national ID, plus proof of address dated within 3 months.
-            Documents are processed securely and never shared with third parties.
-          </p>
-          <KycUploadForm kycCaseId={kycCase?.id} />
+      {showKycActions && (
+        <div className="flex flex-col gap-4">
+          <RequestVerificationCard kycStatus={kycStatus} />
+          <div className="bg-nexus-gold/[0.06] border border-nexus-gold/10 rounded-lg p-5">
+            <div className="text-[10.5px] tracking-[1.5px] uppercase text-nexus-gold mb-3">Optional — upload documents</div>
+            <p className="text-[12.5px] text-nexus-muted leading-[1.7] mb-4">
+              You can attach ID, proof of address, or any test file for demo purposes. This is not required to request review above.
+            </p>
+            <KycUploadForm kycCaseId={kycCase?.id} />
+          </div>
         </div>
       )}
 

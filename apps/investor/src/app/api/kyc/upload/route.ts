@@ -45,7 +45,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   } else {
     // Create new case if none exists or get active one
     caseRecord = await prisma.kycCase.findFirst({
-      where: { investorProfileId: profile.id, status: { in: ['DOCUMENTS_REQUESTED', 'ADDITIONAL_INFO_REQUIRED'] } },
+      where: {
+        investorProfileId: profile.id,
+        status: { in: ['DOCUMENTS_REQUESTED', 'ADDITIONAL_INFO_REQUIRED', 'UNDER_REVIEW', 'DOCUMENTS_SUBMITTED'] },
+      },
       orderBy: { createdAt: 'desc' },
     })
     if (!caseRecord) {

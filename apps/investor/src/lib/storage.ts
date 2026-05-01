@@ -1,6 +1,6 @@
 // apps/investor/src/lib/storage.ts
-// Abstraction layer for S3-compatible file storage
-// Supports AWS S3 and Cloudflare R2
+// Abstraction layer for file storage
+// Supports AWS S3, Cloudflare R2, and local filesystem (development)
 
 import {
   S3Client,
@@ -10,6 +10,8 @@ import {
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { randomUUID } from 'crypto'
+
+const LOCAL_ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? 'http://localhost:3001'
 
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
@@ -88,7 +90,7 @@ export async function uploadFile(
   storageKey: string,
   fileBuffer: Buffer,
   mimeType: string,
-  isPrivate: boolean = true
+  _isPrivate: boolean = true
 ): Promise<string> {
   const client = getS3Client()
   const bucket = process.env.AWS_S3_BUCKET ?? process.env.R2_BUCKET!
@@ -99,8 +101,6 @@ export async function uploadFile(
       Key: storageKey,
       Body: fileBuffer,
       ContentType: mimeType,
-      ACL: isPrivate ? 'private' : 'public-read',
-      ServerSideEncryption: 'AES256',
     })
   )
 
@@ -109,11 +109,15 @@ export async function uploadFile(
 
 export async function getSignedDownloadUrl(
   storageKey: string,
-  expirySeconds?: number
+  _expirySeconds?: number
 ): Promise<string> {
+  if ((process.env.STORAGE_PROVIDER ?? 's3') === 'local') {
+    return `${LOCAL_ADMIN_URL}/uploads/${storageKey}`
+  }
+
   const client = getS3Client()
   const bucket = process.env.AWS_S3_BUCKET ?? process.env.R2_BUCKET!
-  const expiry = expirySeconds ?? parseInt(process.env.SIGNED_URL_EXPIRY_SECONDS ?? '3600')
+  const expiry = _expirySeconds ?? parseInt(process.env.SIGNED_URL_EXPIRY_SECONDS ?? '3600')
 
   const command = new GetObjectCommand({
     Bucket: bucket,

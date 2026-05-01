@@ -5,19 +5,10 @@ import { formatCurrency, formatPercent, dealTypeLabel, fundingProgress } from '@
 import { Badge } from '@/components/ui/badge'
 import { getSignedDownloadUrl } from '@/lib/storage'
 import Link from 'next/link'
-import { DealsFilterBar } from '@/components/deals/deals-filter-bar'
 
 export const dynamic = 'force-dynamic'
 
-interface SearchParams {
-  type?: string
-  region?: string
-  riskGrade?: string
-  minApr?: string
-  maxLtv?: string
-}
-
-async function getDeals(userId: string, filters: SearchParams) {
+async function getOpportunities(userId: string) {
   const profile = await prisma.investorProfile.findUnique({
     where: { userId },
     select: { tier: true },
@@ -25,24 +16,28 @@ async function getDeals(userId: string, filters: SearchParams) {
   const canSeeApprovedOnly = profile?.tier === 'PLATINUM' || profile?.tier === 'PREMIUM'
 
   const where: any = {
+    isPortfolio: false,
+    openForInvestment: true,
     visibleToInvestors: true,
     status: { in: ['LIVE', 'FUNDED', 'ACTIVE'] },
     ...(canSeeApprovedOnly ? {} : { approvedInvestorsOnly: false }),
-    ...(filters.type ? { type: filters.type } : {}),
-    ...(filters.region ? { propertyRegion: filters.region } : {}),
-    ...(filters.riskGrade ? { riskGrade: filters.riskGrade } : {}),
-    ...(filters.minApr ? { investorApr: { gte: parseFloat(filters.minApr) } } : {}),
-    ...(filters.maxLtv ? { ltv: { lte: parseFloat(filters.maxLtv) } } : {}),
   }
 
-  const deals = await prisma.deal.findMany({
+  const allDeals = await prisma.deal.findMany({
     where,
-    orderBy: [{ isFeatured: 'desc' }, { publishedAt: 'desc' }],
     include: {
       images: { where: { isPrimary: true, deletedAt: null }, take: 1 },
       investments: { where: { status: { not: 'PENDING' } }, select: { id: true } },
     },
   })
+
+  // Fisher-Yates shuffle and take 5
+  const shuffled = [...allDeals]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  const deals = shuffled.slice(0, 5)
 
   return Promise.all(deals.map(async (d) => ({
     ...d,
@@ -60,39 +55,45 @@ async function getDeals(userId: string, filters: SearchParams) {
   })))
 }
 
-export default async function DealsPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function InvestmentOpportunitiesPage() {
   const session = await getSession()
-  const deals = await getDeals(session!.user.id, searchParams)
+  const deals = await getOpportunities(session!.user.id)
 
-  const totalCapital = deals.reduce((s, d) => s + d.targetRaise, 0)
   const avgApr = deals.length > 0 ? deals.reduce((s, d) => s + d.investorApr, 0) / deals.length : 0
   const avgLtv = deals.length > 0 ? deals.reduce((s, d) => s + d.ltv, 0) / deals.length : 0
 
   return (
     <div className="flex flex-col gap-5 animate-fadeIn">
 
-      {/* Stats bar */}
-      <div className="flex items-center gap-6">
-        {[
-          { label: 'Live Opportunities', value: deals.length.toString() },
-          { label: 'Weighted Avg APR',   value: formatPercent(avgApr),        accent: true },
-          { label: 'Total Capital',       value: formatCurrency(totalCapital, 'GBP', true), accent: true },
-          { label: 'Avg LTV',            value: formatPercent(avgLtv, 0) },
-        ].map((s, i) => (
-          <div key={i} className={i > 0 ? 'border-l border-nexus pl-6' : ''}>
-            <div className="text-[9.5px] tracking-[1.2px] uppercase text-nexus-hint mb-1">{s.label}</div>
-            <div className={`font-mono text-[19px] font-medium ${s.accent ? 'text-nexus-gold' : ''}`}>{s.value}</div>
-          </div>
-        ))}
+      {/* Header */}
+      <div>
+        <h1 className="font-serif text-[22px] mb-1">Investment Opportunities</h1>
+        <p className="text-[13px] text-nexus-muted">
+          Curated selection of senior secured real estate loans, updated regularly.
+        </p>
       </div>
 
-      <DealsFilterBar currentFilters={searchParams} />
+      {/* Stats */}
+      {deals.length > 0 && (
+        <div className="flex items-center gap-6">
+          {[
+            { label: 'Showing',        value: `${deals.length} of ${deals.length} live` },
+            { label: 'Avg APR',        value: formatPercent(avgApr), accent: true },
+            { label: 'Avg LTV',        value: formatPercent(avgLtv, 0) },
+          ].map((s, i) => (
+            <div key={i} className={i > 0 ? 'border-l border-nexus pl-6' : ''}>
+              <div className="text-[9.5px] tracking-[1.2px] uppercase text-nexus-hint mb-1">{s.label}</div>
+              <div className={`font-mono text-[19px] font-medium ${s.accent ? 'text-nexus-gold' : ''}`}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {deals.length === 0 ? (
         <div className="py-16 text-center text-nexus-muted">
           <div className="text-[32px] mb-3 opacity-20">◎</div>
-          <div className="text-[14px] font-medium mb-1">No deals match your filters</div>
-          <div className="text-[12px]">Try adjusting your criteria or check back soon.</div>
+          <div className="text-[14px] font-medium mb-1">No opportunities available right now</div>
+          <div className="text-[12px]">Check back soon — new deals are added regularly.</div>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
@@ -106,9 +107,18 @@ export default async function DealsPage({ searchParams }: { searchParams: Search
                 <div className="h-[140px] bg-nexus-bg3 flex items-center justify-center relative overflow-hidden">
                   {deal.primaryImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={deal.primaryImageUrl} alt={deal.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-75 transition-opacity" />
+                    <img
+                      src={deal.primaryImageUrl}
+                      alt={deal.name}
+                      className="w-full h-full object-cover opacity-70 group-hover:opacity-85 transition-opacity"
+                    />
                   ) : (
-                    <span className="text-4xl opacity-20">🏙️</span>
+                    <div className="flex flex-col items-center gap-2 opacity-20">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9,22 9,12 15,12 15,22"/>
+                      </svg>
+                    </div>
                   )}
                   <div className="absolute bottom-3 left-3 flex gap-1.5">
                     <Badge variant="gold">{dealTypeLabel(deal.type)}</Badge>
@@ -124,12 +134,12 @@ export default async function DealsPage({ searchParams }: { searchParams: Search
                     📍 {deal.propertyCity}{deal.propertyRegion ? `, ${deal.propertyRegion}` : ''} · {deal.chargeType.replace('_', ' ')}
                   </div>
 
-                  {/* Key metrics grid */}
+                  {/* Key metrics */}
                   <div className="grid grid-cols-4 gap-px bg-nexus border border-nexus rounded-lg overflow-hidden mb-3">
                     {[
-                      { label: 'APR', value: formatPercent(deal.investorApr), accent: true },
-                      { label: 'LTV', value: formatPercent(deal.ltv, 0) },
-                      { label: 'Term', value: `${deal.loanDurationMonths} mo` },
+                      { label: 'APR',    value: formatPercent(deal.investorApr), accent: true },
+                      { label: 'LTV',    value: formatPercent(deal.ltv, 0) },
+                      { label: 'Term',   value: `${deal.loanDurationMonths} mo` },
                       { label: 'Charge', value: deal.chargeType === 'FIRST_CHARGE' ? 'First' : 'Second', teal: true },
                     ].map(({ label, value, accent, teal }) => (
                       <div key={label} className="bg-nexus-bg3 p-2.5 text-center">
@@ -163,6 +173,10 @@ export default async function DealsPage({ searchParams }: { searchParams: Search
           })}
         </div>
       )}
+
+      <p className="text-[11px] text-nexus-muted text-center mt-2">
+        Showing a curated selection. Contact your relationship manager for the full deal pipeline.
+      </p>
     </div>
   )
 }

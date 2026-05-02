@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@nexus/db'
-import { uploadFile, validateFileUpload, generateStorageKey, deleteFile, getSignedDownloadUrl } from '@/lib/storage'
+import { uploadFile, validateFileUpload, generateStorageKey, deleteFile, getSignedDownloadUrl, dealImageStorageIsLocal } from '@/lib/storage'
 import { writeAuditLog } from '@/lib/audit'
 
 const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -14,6 +14,25 @@ export async function POST(
 ): Promise<NextResponse> {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } }, { status: 401 })
+
+  // R2/S3 production uses presigned PUT (upload-url → browser → R2 → complete). Multipart here hits Vercel body limits
+  // and is only for STORAGE_PROVIDER=local. Cached old admin JS still POSTs multipart — reject early without buffering the body.
+  const contentType = req.headers.get('content-type') ?? ''
+  if (!dealImageStorageIsLocal() && contentType.includes('multipart/form-data')) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'USE_DIRECT_UPLOAD_FLOW',
+          message:
+            'This upload path is for local dev only. Hard-reload the admin app (empty cache / private window) so it uses direct R2 uploads.',
+          details:
+            'Expected: POST …/images/upload-url (JSON), then PUT to *.r2.cloudflarestorage.com, then POST …/images/complete. Multipart to …/images is disabled when STORAGE_PROVIDER is not "local".',
+        },
+      },
+      { status: 400 }
+    )
+  }
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null
@@ -85,30 +104,7 @@ export async function POST(
     },
   })
 
-  let signedUrl: string
-  try {
-    signedUrl = await getSignedDownloadUrl(storageKey)
-  } catch (err) {
-    const raw = err instanceof Error ? err.message : String(err)
-    console.error('[images/upload] presign failed after PutObject:', err)
-    try {
-      await prisma.dealImage.delete({ where: { id: image.id } })
-    } catch {}
-    try {
-      await deleteFile(storageKey)
-    } catch {}
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: 'SIGN_ERROR',
-          message: 'Image was stored but creating a read URL failed (check R2 env on admin).',
-          details: raw.length > 400 ? `${raw.slice(0, 400)}…` : raw,
-        },
-      },
-      { status: 500 }
-    )
-  }
+  const signedUrl = await getSignedDownloadUrl(storageKey)
 
   return NextResponse.json({
     success: true,

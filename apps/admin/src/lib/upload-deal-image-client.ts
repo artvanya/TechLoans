@@ -12,12 +12,22 @@ export async function uploadDealImageFromBrowser(
   const mimeType = file.type || 'application/octet-stream'
   const meta = { fileName: file.name, mimeType, fileSize: file.size }
 
-  const u1 = await fetch(`/api/deals/${dealId}/images/upload-url`, {
+  const u1 = await fetch(`/api/deals/${dealId}/images/upload-url?_=${Date.now()}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(meta),
   })
-  const j1 = await u1.json()
+  const u1text = await u1.text()
+  let j1: { success?: boolean; data?: unknown; error?: { message?: string; details?: string } }
+  try {
+    j1 = JSON.parse(u1text) as typeof j1
+  } catch {
+    return {
+      ok: false,
+      message: `Upload URL returned non-JSON (HTTP ${u1.status})`,
+      details: u1text.slice(0, 300),
+    }
+  }
   if (!j1.success) {
     return {
       ok: false,
@@ -26,7 +36,8 @@ export async function uploadDealImageFromBrowser(
     }
   }
 
-  if (j1.data?.mode === 'local') {
+  const data1 = j1.data as { mode?: string } | undefined
+  if (data1?.mode === 'local') {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('isPrimary', opts.isPrimary ? 'true' : 'false')
@@ -62,7 +73,7 @@ export async function uploadDealImageFromBrowser(
     }
   }
 
-  const u3 = await fetch(`/api/deals/${dealId}/images/complete`, {
+  const u3 = await fetch(`/api/deals/${dealId}/images/complete?_=${Date.now()}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

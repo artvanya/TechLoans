@@ -2,12 +2,17 @@
  * Demo-only data: extra live deals + track-record portfolio rows + DealImage URLs.
  *
  * Track Record shows deals with isPortfolio=true only (admin “portfolio” / past deals).
+ * Open investment opportunities (investor /deals) use isPortfolio=false, LIVE, visible, open for investment.
  * Re-seeds five UA case studies (Малютянка, Козин, Нещеров, Ходосівка, University) with static /track-record/*.png.
+ * Removes admin “Open Investment” placeholders (empty form submits) and ensures several full demo listings with HTTPS cover images.
  *
  * Run: DEMO_SEED=1 pnpm exec tsx prisma/seed-demo.ts (from packages/db), or pnpm db:seed:demo from repo root.
+ * Marketplace-only (no track record changes): OPPORTUNITIES_SEED=1 pnpm db:seed:opportunities
  */
 
 import { PrismaClient } from '@prisma/client'
+import { removePlaceholderOpenInvestmentDeals } from './lib/deal-cascade-delete'
+import { LIVE_IMG, opportunitySpecs } from './lib/investment-opportunity-specs'
 
 const prisma = new PrismaClient()
 
@@ -18,77 +23,6 @@ const TR_IMG = {
   neshcherov: '/track-record/neshcherov.png',
   khodosivka: '/track-record/khodosivka.png',
 } as const
-
-const LIVE_IMG = {
-  a: 'https://picsum.photos/id/188/1200/800',
-  b: 'https://picsum.photos/id/42/1200/800',
-  c: 'https://picsum.photos/id/106/1200/800',
-} as const
-
-function dealPayload(
-  internalId: string,
-  name: string,
-  city: string,
-  summary: string,
-  propertyDescription: string,
-  loanAmount: number,
-  valuation: number,
-  ltv: number,
-  apr: number,
-  targetRaise: number,
-  raised: number,
-  imageUrl: string
-) {
-  return {
-    internalId,
-    name,
-    status: 'LIVE' as const,
-    type: 'BRIDGE_FINANCE' as const,
-    borrowerType: 'UK SPV',
-    borrowerPurpose:
-      'Short-term acquisition finance with a clear refinance exit to a high-street lender within 9–12 months. Borrower has executed similar exits twice before.',
-    summary,
-    propertyType: 'Residential — prime',
-    propertyAddress: 'Redacted for demo',
-    propertyCity: city,
-    propertyRegion: 'England',
-    propertyPostcode: 'SW1A 1AA',
-    propertyDescription,
-    loanAmount,
-    propertyValuation: valuation,
-    ltv,
-    investorApr: apr,
-    borrowerRate: apr + 2.5,
-    minimumInvestment: 1000,
-    loanDurationMonths: 12,
-    maturityDate: new Date(Date.now() + 330 * 24 * 60 * 60 * 1000),
-    repaymentType: 'MONTHLY_INTEREST_BULLET' as const,
-    exitRoute: 'Refinance to term debt',
-    targetRaise,
-    currentRaised: raised,
-    riskGrade: 'A' as const,
-    chargeType: 'FIRST_CHARGE' as const,
-    valuationSource: 'Independent RICS · within 90 days',
-    underwritingSummary:
-      'Conservative LTV, first legal charge, and documented exit. Borrower covenant package includes quarterly reporting and cash sweep if DSCR tightens.',
-    keyStrengths:
-      '• First charge over unencumbered asset\n• LTV buffer vs. forced-sale valuation\n• Experienced sponsor with prior exits on time',
-    keyRisks:
-      '• Refinance market pricing at exit\n• Execution risk on minor refurbishment scope',
-    downsideProtection:
-      'Investors rank ahead of all junior capital. Enforcement playbook is pre-agreed with panel counsel; historical recoveries on comparable positions are full principal plus contractual default interest.',
-    recoveryTimeMonths: 5,
-    scenarioNote:
-      'Stress case assumes 18% valuation decline at exit; senior principal remains covered at current LTV.',
-    visibleToInvestors: true,
-    openForInvestment: true,
-    approvedInvestorsOnly: false,
-    autoInvestEligible: true,
-    isFeatured: internalId.endsWith('001'),
-    publishedAt: new Date(),
-    _imageUrl: imageUrl,
-  }
-}
 
 type PortfolioExtras = Partial<{
   collateralSummary: string
@@ -187,50 +121,12 @@ async function main() {
     process.exit(1)
   }
 
-  const specs = [
-    dealPayload(
-      'NXSD-DEMO-001',
-      'Mayfair Bridge — Prime Residential',
-      'London',
-      'Senior secured bridge on a prime Mayfair townhouse. Sponsor refinancing a completed light refurbishment ahead of a long-let institutional exit.',
-      'Corner position with dual aspect; unlisted interior specification with underfloor heating and lift. Title reviewed — single freehold, no adverse easements noted in initial OS1.',
-      4200000,
-      7200000,
-      58,
-      10.2,
-      4200000,
-      1680000,
-      LIVE_IMG.a
-    ),
-    dealPayload(
-      'NXSD-DEMO-002',
-      'Chelsea Garden Square — Stabilised BTL',
-      'London',
-      'Stabilised buy-to-let bridge: in-place ASTs, 6.2% NIY at loan sizing, sponsor adding second charge only after full draw.',
-      'White stucco period building; garden square aspect. Recent EPC and electrical certs on file. Minor cyclical decoration only — no structural works in scope.',
-      1850000,
-      2950000,
-      63,
-      9.4,
-      1850000,
-      740000,
-      LIVE_IMG.b
-    ),
-    dealPayload(
-      'NXSD-DEMO-003',
-      'Oxford Science Quarter — Lab-to-Office Conversion',
-      'Oxford',
-      'Conversion bridge while anchor tenant LOI converts to FRI lease. Lender step-in rights on contractor retentions.',
-      'Former mid-rise lab block; planning consent for change of use secured. Phase 1 strip-out complete; MEP design locked with tier-1 consultant sign-off.',
-      2650000,
-      4100000,
-      65,
-      11.1,
-      2650000,
-      530000,
-      LIVE_IMG.c
-    ),
-  ]
+  const removedOpen = await removePlaceholderOpenInvestmentDeals(prisma)
+  if (removedOpen > 0) {
+    console.log(`Removed ${removedOpen} placeholder “Open Investment” deal(s) (empty admin form).`)
+  }
+
+  const specs = opportunitySpecs()
 
   for (const spec of specs) {
     const { _imageUrl, ...dealData } = spec
@@ -430,7 +326,7 @@ async function main() {
   }
 
   console.log(
-    '✅ Demo seed: live deals, 5 UA track-record cases (Малютянка, Козин, Нещеров, Ходосівка, University) + static /track-record/*.png, (+ NXSD-DEV-001 if present).'
+    '✅ Demo seed: 6 live marketplace deals (NXSD-DEMO-001…006) with cover URLs, 5 UA track-record cases + /track-record/*.png, junk “Open Investment” rows removed, (NXSD-DEV-001 upgraded if still present).'
   )
 }
 

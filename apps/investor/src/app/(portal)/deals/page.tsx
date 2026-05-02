@@ -23,21 +23,14 @@ async function getOpportunities(userId: string) {
     ...(canSeeApprovedOnly ? {} : { approvedInvestorsOnly: false }),
   }
 
-  const allDeals = await prisma.deal.findMany({
+  const deals = await prisma.deal.findMany({
     where,
+    orderBy: [{ isFeatured: 'desc' }, { publishedAt: 'desc' }, { createdAt: 'desc' }],
     include: {
       images: { where: { isPrimary: true, deletedAt: null }, take: 1 },
       investments: { where: { status: { not: 'PENDING' } }, select: { id: true } },
     },
   })
-
-  // Fisher-Yates shuffle and take 5
-  const shuffled = [...allDeals]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  const deals = shuffled.slice(0, 5)
 
   return Promise.all(deals.map(async (d) => ({
     ...d,
@@ -75,7 +68,7 @@ export default async function InvestmentOpportunitiesPage() {
       {deals.length > 0 && (
         <div className="flex items-center gap-6">
           {[
-            { label: 'Showing',        value: `${deals.length} of ${deals.length} live` },
+            { label: 'Live opportunities', value: deals.length.toString() },
             { label: 'Avg APR',        value: formatPercent(avgApr), accent: true },
             { label: 'Avg LTV',        value: formatPercent(avgLtv, 0) },
           ].map((s, i) => (
@@ -174,7 +167,7 @@ export default async function InvestmentOpportunitiesPage() {
       )}
 
       <p className="text-[11px] text-nexus-muted text-center mt-2">
-        Showing a curated selection. Contact your relationship manager for the full deal pipeline.
+        All live opportunities you are eligible to view. Contact your relationship manager for pipeline updates.
       </p>
     </div>
   )

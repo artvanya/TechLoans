@@ -150,19 +150,19 @@ export function TrackRecordPortfolioCard({ deal }: { deal: TrackRecordDealPayloa
             )}
           </div>
 
-          {/* Same vertical slot on every card so metrics + dossier row line up in the grid */}
-          <div className="shrink-0 min-h-[5.25rem]">
-            {deal.propertyDescription ? (
-              <div className="relative rounded-lg bg-white/[0.02] ring-1 ring-white/[0.04] px-2.5 py-2 -mx-0.5 h-full min-h-[5.25rem]">
-                <p className="text-[11.5px] text-nexus-muted leading-relaxed m-0 line-clamp-2">
-                  {deal.propertyDescription}
-                </p>
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0 bottom-0 h-11 rounded-b-lg bg-gradient-to-t from-nexus-bg2 via-nexus-bg2/85 to-transparent"
-                />
-              </div>
-            ) : null}
+          {/* Fixed-height synopsis so every card aligns; long copy scrolls inside (preview only). */}
+          <div className="shrink-0 h-[7.25rem] rounded-lg bg-white/[0.025] ring-1 ring-white/[0.06] -mx-0.5 overflow-hidden flex flex-col">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2.5 py-2.5 [scrollbar-width:thin] [scrollbar-color:rgba(191,160,99,0.35)_transparent]">
+              <p className="font-serif text-[12px] leading-[1.55] text-[#d8d6d0] m-0 tracking-[0.02em] [text-wrap:pretty]">
+                {deal.propertyDescription?.trim() ? (
+                  deal.propertyDescription
+                ) : (
+                  <span className="text-[11px] italic text-nexus-muted/75">
+                    Synopsis available in the case dossier.
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
 
           <div className="flex-1 min-h-[1px] min-w-0" aria-hidden />

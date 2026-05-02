@@ -85,7 +85,13 @@ export default async function AdminDealsPage({ searchParams }: { searchParams: P
                 <tr><td colSpan={11} style={{ padding: '32px', textAlign: 'center', color: '#7C7A74', fontSize: '12px' }}>No deals match the current filter</td></tr>
               )}
               {deals.map((deal) => {
-                const pct = Number(deal.targetRaise) > 0 ? Math.round(Number(deal.currentRaised) / Number(deal.targetRaise) * 100) : 0
+                const target = Number(deal.targetRaise)
+                const rawRaised = Number(deal.currentRaised)
+                const effectiveRaised =
+                  deal.isPortfolio && ['REPAID', 'CLOSED'].includes(deal.status) && target > 0
+                    ? target
+                    : rawRaised
+                const pct = target > 0 ? Math.round((effectiveRaised / target) * 100) : 0
                 return (
                   <tr key={deal.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer' }}>
                     <td style={{ padding: '12px 14px' }}>

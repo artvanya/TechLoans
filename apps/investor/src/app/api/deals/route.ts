@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma, type Prisma } from '@nexus/db'
-import { getSignedDownloadUrl } from '@/lib/storage'
+import { getDealImageDisplayUrl } from '@/lib/storage'
 import type { ApiResponse, DealSummary } from '@nexus/shared'
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -66,11 +66,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     deals.map(async (d) => {
       let primaryImageUrl: string | null = null
       if (d.images[0]) {
-        try {
-          primaryImageUrl = await getSignedDownloadUrl(d.images[0].storageKey, 3600)
-        } catch {
-          // Image unavailable — not critical
-        }
+        primaryImageUrl = await getDealImageDisplayUrl(d.images[0].storageKey, 3600)
       }
 
       return {

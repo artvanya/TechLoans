@@ -1,7 +1,7 @@
 // apps/investor/src/app/(portal)/track-record/page.tsx
 import { prisma } from '@nexus/db'
 import { formatCurrency, formatPercent } from '@/lib/utils'
-import { getSignedDownloadUrl } from '@/lib/storage'
+import { getDealImageDisplayUrl } from '@/lib/storage'
 import { TrackRecordPortfolioCard, type TrackRecordDealPayload } from '@/components/track-record/track-record-portfolio-card'
 
 export const dynamic = 'force-dynamic'
@@ -42,7 +42,7 @@ export default async function TrackRecordPage() {
     portfolioRaw.map(async (d) => {
       let imageUrl: string | null = null
       if (d.images[0]) {
-        try { imageUrl = await getSignedDownloadUrl(d.images[0].storageKey, 3600) } catch {}
+        imageUrl = await getDealImageDisplayUrl(d.images[0].storageKey, 3600)
       }
       return { ...d, imageUrl }
     })

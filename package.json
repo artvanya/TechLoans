@@ -11,7 +11,8 @@
     "build": "turbo run build",
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",
-    "db:studio": "cd packages/db && npx prisma studio"
+    "db:studio": "cd packages/db && npx prisma studio",
+    "db:seed:demo": "cd packages/db && DEMO_SEED=1 pnpm exec tsx prisma/seed-demo.ts"
   },
   "devDependencies": {
     "pnpm": "^9.0.0",

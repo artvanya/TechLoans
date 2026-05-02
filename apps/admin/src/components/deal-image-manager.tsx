@@ -1,6 +1,7 @@
 'use client'
 // apps/admin/src/components/deal-image-manager.tsx
 import { useState, useEffect, useRef } from 'react'
+import { uploadDealImageFromBrowser } from '@/lib/upload-deal-image-client'
 
 interface DealImage {
   id: string
@@ -35,11 +36,11 @@ export function DealImageManager({ dealId }: DealImageManagerProps) {
     setError(null)
     setUploading(true)
     for (const file of Array.from(files)) {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch(`/api/deals/${dealId}/images`, { method: 'POST', body: fd })
-      const data = await res.json()
-      if (!data.success) { setError(data.error?.message ?? 'Upload failed'); break }
+      const r = await uploadDealImageFromBrowser(dealId, file, { isPrimary: false })
+      if (!r.ok) {
+        setError([r.message, r.details].filter(Boolean).join(' — '))
+        break
+      }
     }
     setUploading(false)
     load()

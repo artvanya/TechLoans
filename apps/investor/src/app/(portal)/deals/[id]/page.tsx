@@ -4,7 +4,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@nexus/db'
 import { formatCurrency, formatPercent, formatDate, dealTypeLabel, chargeTypeLabel, riskGradeLabel } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { getSignedDownloadUrl } from '@/lib/storage'
+import { getDealImageDisplayUrl } from '@/lib/storage'
 import { InvestPanel } from '@/components/deals/invest-panel'
 
 export const dynamic = 'force-dynamic'
@@ -26,7 +26,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   const imagesWithUrls = await Promise.all(
     deal.images.map(async (img) => ({
       id: img.id, isPrimary: img.isPrimary, sortOrder: img.sortOrder,
-      url: await getSignedDownloadUrl(img.storageKey, 3600).catch(() => ''),
+      url: (await getDealImageDisplayUrl(img.storageKey, 3600)) ?? '',
     }))
   )
 
@@ -113,7 +113,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                 <div key={img.id} className={`rounded-lg overflow-hidden border ${img.isPrimary ? 'border-nexus-gold col-span-2 row-span-2' : 'border-nexus'}`}
                   style={{ aspectRatio: '16/10' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  <img src={img.url} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 </div>
               ))}
             </div>

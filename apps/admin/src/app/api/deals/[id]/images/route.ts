@@ -37,8 +37,20 @@ export async function POST(
   try {
     await uploadFile(storageKey, buffer, file.type, true)
   } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err)
+    const details = raw.length > 400 ? `${raw.slice(0, 400)}…` : raw
     console.error('[images/upload] Storage error:', err)
-    return NextResponse.json({ success: false, error: { code: 'STORAGE_ERROR', message: 'Image upload failed' } }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'STORAGE_ERROR',
+          message: 'Image upload failed — check Admin Vercel logs and R2 token permissions.',
+          details,
+        },
+      },
+      { status: 500 }
+    )
   }
 
   // Get current max sort order

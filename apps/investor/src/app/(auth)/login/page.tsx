@@ -1,6 +1,6 @@
 'use client'
 // apps/investor/src/app/(auth)/login/page.tsx
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -15,7 +15,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   default:               'Login failed. Please check your details and try again.',
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') ?? '/portfolio'
@@ -55,13 +55,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-nexus-bg flex items-center justify-center px-4">
       <div className="w-full max-w-[380px]">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="font-serif text-[28px] tracking-[5px] text-nexus-gold uppercase mb-1">Nexus</div>
           <div className="text-[9.5px] tracking-[2.5px] uppercase text-nexus-muted">Private Credit · Institutional</div>
         </div>
 
-        {/* Card */}
         <div className="bg-nexus-bg2 border border-nexus2 rounded-xl p-7">
           <h1 className="text-[18px] font-semibold mb-1.5">Investor sign in</h1>
           <p className="text-[12.5px] text-nexus-muted mb-6">Access your portfolio and available loan opportunities.</p>
@@ -122,7 +120,7 @@ export default function LoginPage() {
 
           <div className="mt-5 pt-5 border-t border-nexus text-center">
             <p className="text-[12px] text-nexus-muted">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link href="/register" className="text-nexus-gold hover:underline">Create account</Link>
             </p>
           </div>
@@ -134,5 +132,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={(
+        <div className="min-h-screen bg-nexus-bg flex items-center justify-center px-4">
+          <div className="w-full max-w-[380px] text-center text-[13px] text-nexus-muted">Loading…</div>
+        </div>
+      )}
+    >
+      <LoginForm />
+    </Suspense>
   )
 }

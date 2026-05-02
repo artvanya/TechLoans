@@ -3,6 +3,7 @@
 // Single-page form to add a completed portfolio deal (track record entry)
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { uploadDealImageFromBrowser } from '@/lib/upload-deal-image-client'
 
 // ── Style tokens ──────────────────────────────────────────────────────────────
 const INPUT: React.CSSProperties = {
@@ -256,14 +257,13 @@ export default function AddPortfolioPage() {
 
       const dealId = json.data.id
 
-      // Upload images if any
+      // Upload images if any (direct to R2 when not local — avoids Vercel body size limit)
       if (images.length > 0) {
         for (let i = 0; i < images.length; i++) {
-          const fd = new FormData()
-          fd.append('file', images[i])
-          fd.append('isPrimary', i === 0 ? 'true' : 'false')
-          fd.append('sortOrder', String(i))
-          await fetch(`/api/deals/${dealId}/images`, { method: 'POST', body: fd })
+          const r = await uploadDealImageFromBrowser(dealId, images[i], { isPrimary: i === 0 })
+          if (!r.ok) {
+            throw new Error([r.message, r.details].filter(Boolean).join(' — ') || 'Image upload failed')
+          }
         }
       }
 

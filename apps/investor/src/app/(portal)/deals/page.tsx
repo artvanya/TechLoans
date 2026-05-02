@@ -3,7 +3,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@nexus/db'
 import { formatCurrency, formatPercent, dealTypeLabel, fundingProgress } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { getSignedDownloadUrl } from '@/lib/storage'
+import { getDealImageDisplayUrl } from '@/lib/storage'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -49,9 +49,7 @@ async function getOpportunities(userId: string) {
     targetRaise: Number(d.targetRaise),
     currentRaised: Number(d.currentRaised),
     investorCount: d.investments.length,
-    primaryImageUrl: d.images[0]
-      ? await getSignedDownloadUrl(d.images[0].storageKey, 3600).catch(() => null)
-      : null,
+    primaryImageUrl: d.images[0] ? await getDealImageDisplayUrl(d.images[0].storageKey, 3600) : null,
   })))
 }
 
@@ -110,6 +108,7 @@ export default async function InvestmentOpportunitiesPage() {
                     <img
                       src={deal.primaryImageUrl}
                       alt={deal.name}
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover opacity-70 group-hover:opacity-85 transition-opacity"
                     />
                   ) : (

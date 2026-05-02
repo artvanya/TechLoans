@@ -60,10 +60,28 @@ export function TrackRecordPortfolioCard({ deal }: { deal: TrackRecordDealPayloa
   }, [open])
 
   const statusLabel: Record<string, string> = {
-    ACTIVE: 'Active', REPAID: 'Closed', DEFAULTED: 'In Recovery', LIVE: 'Live', FUNDED: 'Funded',
+    ACTIVE: 'Active',
+    REPAID: 'Repaid',
+    CLOSED: 'Closed',
+    DEFAULTED: 'In recovery',
+    LIVE: 'Live',
+    FUNDED: 'Funded',
+    DRAFT: 'Draft',
+    UNDER_REVIEW: 'Review',
+    APPROVED: 'Approved',
+    REJECTED: 'Rejected',
   }
   const statusColor: Record<string, string> = {
-    ACTIVE: '#2CC89A', REPAID: '#5B9CF6', DEFAULTED: '#E05C5C', LIVE: '#2CC89A', FUNDED: '#BFA063',
+    ACTIVE: '#2CC89A',
+    REPAID: '#5B9CF6',
+    CLOSED: '#5B9CF6',
+    DEFAULTED: '#E05C5C',
+    LIVE: '#2CC89A',
+    FUNDED: '#BFA063',
+    DRAFT: '#7C7A74',
+    UNDER_REVIEW: '#E8A030',
+    APPROVED: '#5B9CF6',
+    REJECTED: '#E05C5C',
   }
   const color = statusColor[deal.status] ?? '#7C7A74'
   const label = statusLabel[deal.status] ?? deal.status
@@ -72,21 +90,26 @@ export function TrackRecordPortfolioCard({ deal }: { deal: TrackRecordDealPayloa
     `${deal.propertyType ?? 'Property'}${deal.propertyCity ? ` · ${deal.propertyCity}` : ''}`
 
   return (
-    <div className="relative bg-nexus-bg2 border border-nexus rounded-xl overflow-hidden flex flex-col h-full min-h-0 w-full flex-1">
+    <div className="relative bg-nexus-bg2 border border-nexus rounded-xl flex flex-col h-full min-h-0 w-full flex-1">
       {/* Preview — opens in-card dossier */}
       <button
         type="button"
         onClick={() => setOpen(true)}
         tabIndex={open ? -1 : 0}
-        className="text-left w-full flex flex-col flex-1 min-h-0 h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-nexus-gold/45 focus-visible:ring-inset rounded-xl"
+        className="text-left w-full flex flex-col flex-1 min-h-0 h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-nexus-gold/45 focus-visible:ring-inset rounded-xl overflow-hidden"
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={`track-deal-dossier-${deal.id}`}
       >
-        <div className="h-[160px] bg-[#0D0E11] relative shrink-0 pointer-events-none">
+        <div className="h-[160px] bg-[#0D0E11] relative shrink-0 pointer-events-none overflow-hidden rounded-t-xl">
           {deal.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={deal.imageUrl} alt={deal.name} className="w-full h-full object-cover" />
+            <img
+              src={deal.imageUrl}
+              alt={deal.name}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5">
@@ -95,7 +118,7 @@ export function TrackRecordPortfolioCard({ deal }: { deal: TrackRecordDealPayloa
             </div>
           )}
           <div
-            className="absolute top-2.5 right-2.5 text-[9.5px] font-bold tracking-wide px-2 py-1 rounded-md border"
+            className="absolute left-2.5 top-2.5 z-[1] max-w-[min(100%-1.25rem,calc(100%-3.5rem))] text-[9.5px] font-bold tracking-wide px-2 py-1 rounded-md border whitespace-nowrap truncate"
             style={{ background: `${color}22`, color, borderColor: `${color}44` }}
           >
             {label.toUpperCase()}
@@ -147,7 +170,15 @@ export function TrackRecordPortfolioCard({ deal }: { deal: TrackRecordDealPayloa
           <div className="shrink-0 flex flex-col gap-2.5">
             <div className="grid grid-cols-3 gap-2">
               {[
-                { label: 'Loan', value: deal.loanAmount > 1 ? `£${(deal.loanAmount / 1000).toFixed(0)}k` : '—' },
+                {
+                  label: 'Loan',
+                  value:
+                    deal.loanAmount >= 1000
+                      ? `£${(deal.loanAmount / 1000).toFixed(deal.loanAmount % 1000 === 0 ? 0 : 1)}k`
+                      : deal.loanAmount > 0
+                        ? formatCurrency(deal.loanAmount, 'GBP', true)
+                        : '—',
+                },
                 { label: 'LTV', value: deal.ltv > 0 ? `${deal.ltv.toFixed(0)}%` : '—' },
                 { label: 'Rate', value: deal.investorApr > 0 ? `${deal.investorApr.toFixed(1)}%` : '—' },
               ].map(({ label: L, value }) => (
@@ -181,8 +212,8 @@ export function TrackRecordPortfolioCard({ deal }: { deal: TrackRecordDealPayloa
           aria-modal="true"
           aria-labelledby={titleId}
           className={cn(
-            'absolute inset-0 z-30 flex flex-col rounded-[inherit] overflow-hidden',
-            'bg-nexus-bg2/[0.97] backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_48px_-12px_rgba(0,0,0,0.65)]',
+            'absolute inset-0 z-40 flex flex-col rounded-xl overflow-hidden isolate',
+            'bg-nexus-bg2 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_48px_-12px_rgba(0,0,0,0.65)]',
             'animate-fadeIn',
           )}
         >
@@ -220,7 +251,15 @@ export function TrackRecordPortfolioCard({ deal }: { deal: TrackRecordDealPayloa
               <DetailRow k="Term" v={`${deal.loanDurationMonths} months (scheduled)`} />
               {deal.riskGrade && <DetailRow k="Risk grade" v={deal.riskGrade} />}
               <DetailRow k="Valuation" v={formatCurrency(deal.propertyValuation)} />
-              <DetailRow k="Target / raised" v={`${formatCurrency(deal.targetRaise)} / ${formatCurrency(deal.currentRaised)}`} />
+              <DetailRow
+                k="Target / raised"
+                v={`${formatCurrency(deal.targetRaise)} / ${formatCurrency(
+                  (deal.status === 'REPAID' || deal.status === 'CLOSED') &&
+                    deal.currentRaised < deal.targetRaise
+                    ? deal.targetRaise
+                    : deal.currentRaised
+                )}`}
+              />
               {deal.originationDate && <DetailRow k="Originated" v={formatDate(deal.originationDate, 'medium')} />}
               {deal.maturityDate && <DetailRow k="Maturity" v={formatDate(deal.maturityDate, 'medium')} />}
               {deal.actualClosingDate && <DetailRow k="Closed" v={formatDate(deal.actualClosingDate, 'medium')} />}

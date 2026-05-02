@@ -203,6 +203,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       autoInvestEligible: data.autoInvestEligible,
       publishedAt: data.visibleToInvestors ? new Date() : null,
       createdById: (session.user as any).id,
+      currentRaised: data.isPortfolio ? data.targetRaise : 0,
     },
   })
 

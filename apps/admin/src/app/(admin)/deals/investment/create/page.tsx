@@ -2,6 +2,7 @@
 // apps/admin/src/app/(admin)/deals/investment/create/page.tsx
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { uploadDealImageFromBrowser } from '@/lib/upload-deal-image-client'
 
 const INPUT: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box',
@@ -168,11 +169,10 @@ export default function AddInvestmentPage() {
 
       const dealId = json.data.id
       for (let i = 0; i < images.length; i++) {
-        const fd = new FormData()
-        fd.append('file', images[i])
-        fd.append('isPrimary', i === 0 ? 'true' : 'false')
-        fd.append('sortOrder', String(i))
-        await fetch(`/api/deals/${dealId}/images`, { method: 'POST', body: fd })
+        const r = await uploadDealImageFromBrowser(dealId, images[i], { isPrimary: i === 0 })
+        if (!r.ok) {
+          throw new Error([r.message, r.details].filter(Boolean).join(' — ') || 'Image upload failed')
+        }
       }
 
       router.push('/deals?investment=true')

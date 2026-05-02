@@ -125,7 +125,27 @@ export async function POST(
     },
   })
 
-  const url = await getSignedDownloadUrl(storageKey)
+  let url: string
+  try {
+    url = await getSignedDownloadUrl(storageKey)
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err)
+    console.error('[images/complete] presign failed:', err)
+    try {
+      await prisma.dealImage.delete({ where: { id: image.id } })
+    } catch {}
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'SIGN_ERROR',
+          message: 'Image record saved but read URL failed; check R2 credentials on admin.',
+          details: raw.length > 400 ? `${raw.slice(0, 400)}…` : raw,
+        },
+      },
+      { status: 500 }
+    )
+  }
 
   await writeAuditLog({
     actorId: (session.user as any).id,

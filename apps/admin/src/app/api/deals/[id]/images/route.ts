@@ -85,7 +85,30 @@ export async function POST(
     },
   })
 
-  const signedUrl = await getSignedDownloadUrl(storageKey)
+  let signedUrl: string
+  try {
+    signedUrl = await getSignedDownloadUrl(storageKey)
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err)
+    console.error('[images/upload] presign failed after PutObject:', err)
+    try {
+      await prisma.dealImage.delete({ where: { id: image.id } })
+    } catch {}
+    try {
+      await deleteFile(storageKey)
+    } catch {}
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'SIGN_ERROR',
+          message: 'Image was stored but creating a read URL failed (check R2 env on admin).',
+          details: raw.length > 400 ? `${raw.slice(0, 400)}…` : raw,
+        },
+      },
+      { status: 500 }
+    )
+  }
 
   return NextResponse.json({
     success: true,

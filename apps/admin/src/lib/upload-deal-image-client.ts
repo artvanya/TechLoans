@@ -62,7 +62,8 @@ export async function uploadDealImageFromBrowser(
   const putRes = await fetch(uploadUrl, {
     method: 'PUT',
     body: file,
-    headers: { 'Content-Type': signedMime },
+    // Do not set Content-Type: presigned URLs from R2/S3 often sign only `host`; an extra
+    // header breaks the signature (403). Object content type is inferred from the key / R2 defaults.
   })
   if (!putRes.ok) {
     const t = await putRes.text().catch(() => '')
